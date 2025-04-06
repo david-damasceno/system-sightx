@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -6,12 +7,13 @@ import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import MessageSearch from "../components/MessageSearch";
 import useChat from "../hooks/useChat";
-import { Loader2, Info, MessageCircle, FileText, Image as ImageIcon, Briefcase, User, Search, Download, Share2 } from "lucide-react";
+import { Loader2, MessageCircle, FileText, Image as ImageIcon, Briefcase, User, Search, Download, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
 const ChatWindow = () => {
   const {
     id
@@ -129,26 +131,11 @@ const ChatWindow = () => {
       toast.info("Compartilhamento não suportado neste navegador");
     }
   };
+  
   return <div className="flex flex-col h-screen">
-      {/* Chat header */}
+      {/* Chat header - simplificado sem os textos "Donna" */}
       <div className="border-b p-4 flex items-center justify-between bg-background/95 dark:bg-sightx-dark/95 backdrop-blur-lg shadow-sm z-10">
-        <div className="flex items-center">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-medium text-lg">Donna</h2>
-              <Badge variant={mode === "business" ? "business" : "personal"} className="text-xs flex items-center gap-1">
-                {mode === "business" ? <>
-                    <Briefcase className="h-3 w-3" />
-                    <span>Empresarial</span>
-                  </> : <>
-                    <User className="h-3 w-3" />
-                    <span>Pessoal</span>
-                  </>}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">Inteligência artificial ao seu dispor</p>
-          </div>
-        </div>
+        <div className="flex-1"></div>
         
         <div className="flex items-center gap-2">
           {isProcessing && <span className="text-xs text-muted-foreground animate-pulse flex items-center bg-sightx-purple/10 px-3 py-1 rounded-full">
@@ -196,8 +183,6 @@ const ChatWindow = () => {
                 </Tooltip>
               </TooltipProvider>
             </>}
-          
-          
         </div>
       </div>
       
@@ -207,10 +192,10 @@ const ChatWindow = () => {
       {/* Chat messages area */}
       <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-6" ref={scrollContainerRef} onScroll={handleScroll}>
         {messages.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-center p-8 animate-fade-in">
-            <div className={cn("w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-lg", mode === "business" ? "bg-gradient-radial from-sightx-green/20 to-sightx-green/5" : "bg-gradient-radial from-sightx-purple/20 to-sightx-purple/5")}>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-lg bg-gradient-radial from-sightx-purple/20 to-sightx-purple/5">
               <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-12 w-12 drop-shadow-md" />
             </div>
-            <h2 className={cn("text-2xl font-semibold mb-3", mode === "business" ? "text-sightx-green" : "text-sightx-purple")}>
+            <h2 className="text-2xl font-semibold mb-3 text-sightx-purple">
               Bem-vindo ao SightX
               {mode === "business" ? " (Modo Empresarial)" : " (Modo Pessoal)"}
             </h2>
@@ -231,9 +216,9 @@ const ChatWindow = () => {
             icon: ImageIcon,
             title: "Anexe imagens",
             description: "Compartilhe imagens para obter descrições e análises visuais."
-          }].map((item, i) => <div key={i} className={cn("p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-shadow", mode === "business" ? "hover:border-sightx-green/30" : "hover:border-sightx-purple/30")}>
-                  <div className={cn("mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-3", mode === "business" ? "bg-sightx-green/10" : "bg-sightx-purple/10")}>
-                    <item.icon className={cn("h-5 w-5", mode === "business" ? "text-sightx-green" : "text-sightx-purple")} />
+          }].map((item, i) => <div key={i} className="p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-shadow hover:border-sightx-purple/30">
+                  <div className="mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-sightx-purple/10">
+                    <item.icon className="h-5 w-5 text-sightx-purple" />
                   </div>
                   <h3 className="font-medium text-base mb-1">{item.title}</h3>
                   <p className="text-xs text-muted-foreground">{item.description}</p>
@@ -250,13 +235,13 @@ const ChatWindow = () => {
         
         {/* AI is typing indicator */}
         {isProcessing && !aiTyping.isTyping && <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
-            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", mode === "business" ? "bg-sightx-green" : "bg-sightx-purple")}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sightx-purple">
               <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-5 w-5" />
             </div>
             <div className="flex items-center gap-1.5">
-              <div className={cn("w-2 h-2 rounded-full animate-pulse", mode === "business" ? "bg-sightx-green" : "bg-sightx-purple")}></div>
-              <div className={cn("w-2 h-2 rounded-full animate-pulse delay-150", mode === "business" ? "bg-sightx-green" : "bg-sightx-purple")}></div>
-              <div className={cn("w-2 h-2 rounded-full animate-pulse delay-300", mode === "business" ? "bg-sightx-green" : "bg-sightx-purple")}></div>
+              <div className="w-2 h-2 rounded-full animate-pulse bg-sightx-purple"></div>
+              <div className="w-2 h-2 rounded-full animate-pulse delay-150 bg-sightx-purple"></div>
+              <div className="w-2 h-2 rounded-full animate-pulse delay-300 bg-sightx-purple"></div>
             </div>
           </div>}
         
@@ -266,7 +251,7 @@ const ChatWindow = () => {
       
       {/* Scroll to bottom button */}
       <div className={cn("absolute bottom-24 right-6 transition-opacity duration-300", showScrollToBottom ? "opacity-100" : "opacity-0 pointer-events-none")}>
-        <Button size="icon" className={cn("rounded-full h-10 w-10 shadow-lg", mode === "business" ? "bg-sightx-green hover:bg-sightx-green/90" : "bg-sightx-purple hover:bg-sightx-purple-light")} onClick={scrollToBottom}>
+        <Button size="icon" className="rounded-full h-10 w-10 shadow-lg bg-sightx-purple hover:bg-sightx-purple-light" onClick={scrollToBottom}>
           <MessageCircle className="h-5 w-5" />
         </Button>
       </div>
@@ -275,4 +260,5 @@ const ChatWindow = () => {
       <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} onOpenSearch={() => setShowSearch(true)} messages={messages} />
     </div>;
 };
+
 export default ChatWindow;

@@ -33,7 +33,6 @@ const NavItem = ({
 }) => {
   const { pathname } = useLocation();
   const isActive = forced !== undefined ? forced : pathname === to || pathname.startsWith(`${to}/`);
-  const [isHovered, setIsHovered] = useState(false);
   
   if (isCompact) {
     return (
@@ -46,18 +45,10 @@ const NavItem = ({
               isActive
                 ? "bg-sightx-purple text-white shadow-md shadow-sightx-purple/20"
                 : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple",
-              isHovered && !isActive && "scale-110"
             )}
             onClick={onClick}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
           >
-            <Icon
-              className={cn(
-                "h-5 w-5 transition-transform",
-                isHovered && !isActive ? "scale-110" : ""
-              )}
-            />
+            <Icon className="h-5 w-5" />
           </Link>
         </HoverCardTrigger>
         <HoverCardContent side="right" className="py-2 px-3 text-sm">
@@ -71,24 +62,17 @@ const NavItem = ({
     <Link
       to={to}
       className={cn(
-        "flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-300 group",
+        "flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-300",
         isActive
           ? "bg-sightx-purple text-white font-medium shadow-md shadow-sightx-purple/20"
           : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple"
       )}
       onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      <Icon
-        className={cn(
-          "h-5 w-5 transition-all",
-          isHovered && !isActive ? "scale-110" : ""
-        )}
-      />
+      <Icon className="h-5 w-5" />
       <span>{children}</span>
-      {isHovered && !isActive && (
-        <ChevronRight className="ml-auto h-4 w-4 text-sightx-purple opacity-0 group-hover:opacity-100 transition-opacity" />
+      {isActive && (
+        <ChevronRight className="ml-auto h-4 w-4 text-white" />
       )}
     </Link>
   );
@@ -175,8 +159,7 @@ const Sidebar = () => {
           >
             <div
               className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg",
-                mode === "business" ? "bg-sightx-green" : "bg-sightx-purple"
+                "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-sightx-purple"
               )}
             >
               <img
@@ -188,8 +171,7 @@ const Sidebar = () => {
             
             <h1
               className={cn(
-                "text-xl font-bold ml-2 transition-all duration-300",
-                mode === "business" ? "text-sightx-green" : "text-sightx-purple",
+                "text-xl font-bold ml-2 transition-all duration-300 text-sightx-purple",
                 isCompact && !isHovering ? "opacity-0 w-0" : "opacity-100"
               )}
             >
@@ -227,12 +209,7 @@ const Sidebar = () => {
           ) : (
             <Link to="/chat">
               <Button
-                className={cn(
-                  "w-full mb-3 flex gap-2 shadow-md",
-                  mode === "business"
-                    ? "bg-sightx-green hover:bg-sightx-green/90 shadow-sightx-green/20"
-                    : "bg-sightx-purple hover:bg-sightx-purple-light shadow-sightx-purple/20"
-                )}
+                className="w-full mb-3 flex gap-2 shadow-md bg-sightx-purple hover:bg-sightx-purple-light shadow-sightx-purple/20"
                 size="sm"
               >
                 <Plus className="h-4 w-4" />
@@ -328,21 +305,11 @@ const Sidebar = () => {
                     className="w-10 h-10 rounded-full p-0 mx-auto block"
                   >
                     <Avatar
-                      className={cn(
-                        "h-9 w-9 border-2",
-                        mode === "business"
-                          ? "border-sightx-green/20"
-                          : "border-sightx-purple/20"
-                      )}
+                      className="h-9 w-9 border-2 border-sightx-purple/20"
                     >
                       <AvatarImage src={user?.avatar} />
                       <AvatarFallback
-                        className={cn(
-                          "text-white",
-                          mode === "business"
-                            ? "bg-sightx-green"
-                            : "bg-sightx-purple"
-                        )}
+                        className="text-white bg-sightx-purple"
                       >
                         {user?.name?.charAt(0) || "U"}
                       </AvatarFallback>
@@ -359,12 +326,7 @@ const Sidebar = () => {
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={user?.avatar} />
                         <AvatarFallback
-                          className={cn(
-                            "text-lg text-white",
-                            mode === "business"
-                              ? "bg-sightx-green"
-                              : "bg-sightx-purple"
-                          )}
+                          className="text-lg text-white bg-sightx-purple"
                         >
                           {user?.name?.charAt(0) || "U"}
                         </AvatarFallback>
@@ -392,21 +354,11 @@ const Sidebar = () => {
             ) : (
               <div className="flex items-center gap-3 px-3 py-2">
                 <Avatar
-                  className={cn(
-                    "h-10 w-10 border-2",
-                    mode === "business"
-                      ? "border-sightx-green/20"
-                      : "border-sightx-purple/20"
-                  )}
+                  className="h-10 w-10 border-2 border-sightx-purple/20"
                 >
                   <AvatarImage src={user?.avatar} />
                   <AvatarFallback
-                    className={cn(
-                      "text-white",
-                      mode === "business"
-                        ? "bg-sightx-green"
-                        : "bg-sightx-purple"
-                    )}
+                    className="text-white bg-sightx-purple"
                   >
                     {user?.name?.charAt(0) || "U"}
                   </AvatarFallback>

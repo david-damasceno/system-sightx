@@ -39,7 +39,7 @@ export const ModeToggle: React.FC = () => {
           value="business" 
           className={cn(
             "flex-1 gap-2 h-9 data-[state=on]:bg-background data-[state=on]:shadow-sm",
-            mode === "business" && "text-sightx-green"
+            mode === "business" && "text-sightx-purple"
           )}
         >
           <Briefcase className="h-4 w-4" />
@@ -59,10 +59,7 @@ export const ModeIndicator: React.FC = () => {
         <Button 
           variant="ghost" 
           size="icon" 
-          className={cn(
-            "h-7 w-7 rounded-full",
-            mode === "business" ? "text-sightx-green" : "text-sightx-purple"
-          )}
+          className="h-7 w-7 rounded-full text-sightx-purple"
         >
           {mode === "business" ? (
             <Briefcase className="h-4 w-4" />
