@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useMode } from "../contexts/ModeContext";
 import { 
   BarChart, FileText, Share2, Filter, Download, Trash2, 
   PieChart, TrendingUp, Calendar, Search, Plus, Tag, CheckCircle2, 
-  AlertCircle, ChevronDown, Star, Clock, Check, CircleSlash
+  AlertCircle, ChevronDown, Star, Clock, Check, CircleSlash, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
