@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import FilePreview from "./FilePreview";
 import VoiceRecorder from "./VoiceRecorder";
-import QuickSuggestions from "./QuickSuggestions";
 import { useMode } from "../contexts/ModeContext";
 
 interface ChatInputProps {
@@ -31,7 +30,6 @@ const ChatInput = ({
   const [isImproved, setIsImproved] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(messages.length === 0 || messages.length === 1);
   const [focused, setFocused] = useState(false);
   const [improvingMessage, setImprovingMessage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +50,6 @@ const ChatInput = ({
       onSendMessage(message, selectedFile || undefined);
       setMessage("");
       setSelectedFile(null);
-      setShowSuggestions(false);
       setIsImproved(false);
       setOriginalMessage("");
       setImprovedMessage("");
@@ -94,13 +91,6 @@ const ChatInput = ({
     setSelectedFile(audioFile);
     setShowVoiceRecorder(false);
     toast.success("Áudio gravado com sucesso!");
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    setMessage(suggestion);
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
   };
 
   const improveMessage = () => {
@@ -158,11 +148,6 @@ const ChatInput = ({
 
   return (
     <div className="border-t glass-panel bg-opacity-30 shadow-lg py-[10px] flex flex-col">
-      {/* Suggestions */}
-      {showSuggestions && !showVoiceRecorder && !isProcessing && (
-        <QuickSuggestions onSuggestionClick={handleSuggestionClick} />
-      )}
-
       {/* Voice recorder */}
       {showVoiceRecorder && (
         <div className="px-[100px] mb-3">
@@ -315,29 +300,7 @@ const ChatInput = ({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              ) : (
-                !showSuggestions && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          type="button" 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
-                          onClick={() => setShowSuggestions(true)}
-                          disabled={isProcessing || improvingMessage}
-                        >
-                          <Lightbulb className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Sugestões</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )
-              )}
+              ) : null}
             </div>
             
             {/* Send button */}
