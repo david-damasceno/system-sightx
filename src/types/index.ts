@@ -12,6 +12,11 @@ export interface Message {
   senderId: string;
   timestamp: Date;
   isAI: boolean;
+  attachment?: {
+    name: string;
+    type: string;
+    url: string;
+  };
 }
 
 export interface ChatSession {

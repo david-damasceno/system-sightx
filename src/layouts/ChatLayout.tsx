@@ -11,8 +11,14 @@ const ChatLayout = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <img 
+          src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
+          alt="SightX Logo" 
+          className="h-20 w-20 mb-8 animate-pulse" 
+        />
+        <Loader2 className="h-8 w-8 text-sightx-purple animate-spin" />
+        <p className="mt-4 text-muted-foreground">Carregando SightX...</p>
       </div>
     );
   }
@@ -23,7 +29,7 @@ const ChatLayout = () => {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-muted/30">
       <Sidebar />
       <main className="flex-1 overflow-hidden">
         <Outlet />
