@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -12,40 +12,79 @@ import {
   Menu,
   X,
   Plus,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  Settings,
+  BellRing,
+  HelpCircle,
+  Moon,
+  Sun
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { useToast } from "@/hooks/use-toast";
 
 const NavItem = ({
   to,
   icon: Icon,
   children,
   onClick,
+  isActive: forced,
+  isCompact,
 }: {
   to: string;
   icon: React.ElementType;
   children: React.ReactNode;
   onClick?: () => void;
+  isActive?: boolean;
+  isCompact?: boolean;
 }) => {
   const { pathname } = useLocation();
-  const isActive = pathname === to || pathname.startsWith(`${to}/`);
+  const isActive = forced !== undefined ? forced : pathname === to || pathname.startsWith(`${to}/`);
   const [isHovered, setIsHovered] = useState(false);
+  
+  if (isCompact) {
+    return (
+      <HoverCard>
+        <HoverCardTrigger asChild>
+          <Link
+            to={to}
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-xl mx-auto mb-1 transition-all duration-300",
+              isActive 
+                ? "bg-sightx-purple text-white shadow-md shadow-sightx-purple/20"
+                : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple",
+              isHovered && !isActive && "scale-110"
+            )}
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <Icon className={cn("h-5 w-5 transition-transform", isHovered && !isActive ? "scale-110" : "")} />
+          </Link>
+        </HoverCardTrigger>
+        <HoverCardContent side="right" className="py-2 px-3 text-sm">
+          {children}
+        </HoverCardContent>
+      </HoverCard>
+    );
+  }
 
   return (
     <Link
       to={to}
       className={cn(
-        "nav-link transition-all duration-200 group",
-        isActive && "active",
-        !isActive && "hover:bg-sightx-purple/10"
+        "flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-300 group",
+        isActive 
+          ? "bg-sightx-purple text-white font-medium shadow-md shadow-sightx-purple/20"
+          : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple"
       )}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Icon className={cn("h-5 w-5 transition-transform", isHovered && "scale-110")} />
+      <Icon className={cn("h-5 w-5 transition-all", isHovered && !isActive ? "scale-110" : "")} />
       <span>{children}</span>
       {isHovered && !isActive && (
         <ChevronRight className="ml-auto h-4 w-4 text-sightx-purple opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -57,17 +96,48 @@ const NavItem = ({
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const { user, logout } = useAuth();
   const location = useLocation();
+  const sidebarRef = useRef<HTMLElement>(null);
+  const { toast } = useToast();
+  
+  // Expand sidebar on hover when in compact mode
+  const handleMouseEnter = () => {
+    if (isCompact) {
+      setIsHovering(true);
+    }
+  };
+  
+  const handleMouseLeave = () => {
+    if (isCompact) {
+      setIsHovering(false);
+    }
+  };
   
   // Close mobile sidebar when route changes
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
 
-  // Toggle compact mode for desktop
-  const toggleCompact = () => {
-    setIsCompact(!isCompact);
+  // Toggle dark mode function
+  const toggleDarkMode = () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+      toast({
+        title: "Tema claro ativado",
+        description: "O tema da aplicação foi alterado para claro.",
+      });
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+      toast({
+        title: "Tema escuro ativado",
+        description: "O tema da aplicação foi alterado para escuro.",
+      });
+    }
   };
   
   return (
@@ -84,62 +154,71 @@ const Sidebar = () => {
       
       {/* Sidebar */}
       <aside
+        ref={sidebarRef}
         className={cn(
-          "bg-white dark:bg-sightx-dark fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out shadow-lg border-r border-border/50 md:relative",
+          "bg-background/95 dark:bg-sightx-dark/95 fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out shadow-lg border-r border-border/50 md:relative backdrop-blur-lg",
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          isCompact ? "w-16" : "w-72"
+          isCompact && !isHovering ? "md:w-[70px]" : "md:w-64",
         )}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        <div className="flex flex-col h-full p-4">
+        <div className="flex flex-col h-full p-3">
           {/* Logo */}
           <div className={cn(
-            "flex items-center justify-center py-6 transition-all duration-300",
-            isCompact ? "justify-center" : "justify-start"
+            "flex items-center justify-center py-4 transition-all duration-300",
+            isCompact && !isHovering ? "justify-center px-0" : "px-3"
           )}>
-            <img 
-              src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-              alt="SightX Logo" 
-              className={cn("h-10 w-10 transition-transform", isCompact && "mx-auto")} 
-            />
-            {!isCompact && (
-              <h1 className="text-xl font-bold ml-2 text-sightx-purple">
-                SightX
-              </h1>
-            )}
+            <div className="w-10 h-10 rounded-xl bg-sightx-purple flex items-center justify-center shadow-lg">
+              <img 
+                src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
+                alt="SightX Logo" 
+                className="h-6 w-6 object-contain" 
+              />
+            </div>
+            
+            <h1 className={cn(
+              "text-xl font-bold text-sightx-purple ml-2 transition-all duration-300",
+              isCompact && !isHovering ? "opacity-0 w-0" : "opacity-100"
+            )}>
+              SightX
+            </h1>
 
             {/* Toggle compact button - only on desktop */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleCompact}
-              className="h-6 w-6 ml-auto hidden md:flex"
+              onClick={() => setIsCompact(!isCompact)}
+              className={cn(
+                "h-6 w-6 ml-auto transition-opacity duration-300 hidden md:flex",
+                isCompact && !isHovering ? "opacity-0" : "opacity-100"
+              )}
             >
-              <ChevronRight className={cn("h-4 w-4 transition-transform", isCompact && "rotate-180")} />
+              {isCompact ? 
+                <ChevronRight className="h-4 w-4" /> : 
+                <ChevronLeft className="h-4 w-4" />
+              }
             </Button>
           </div>
           
-          <Separator className="my-4" />
+          <Separator className="my-3" />
           
           {/* New Chat button */}
-          {isCompact ? (
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <Button 
-                  className="mx-auto bg-sightx-purple hover:bg-sightx-purple-light mb-6 h-10 w-10 rounded-full p-0" 
-                  asChild
-                >
-                  <Link to="/chat">
-                    <Plus className="h-5 w-5" />
-                  </Link>
-                </Button>
-              </HoverCardTrigger>
-              <HoverCardContent side="right" align="start" className="p-2 text-sm">
-                Nova Conversa
-              </HoverCardContent>
-            </HoverCard>
+          {isCompact && !isHovering ? (
+            <NavItem 
+              to="/chat" 
+              icon={Plus} 
+              isCompact={true}
+              isActive={false}
+            >
+              Nova Conversa
+            </NavItem>
           ) : (
             <Link to="/chat">
-              <Button className="w-full bg-sightx-purple hover:bg-sightx-purple-light mb-6 flex gap-2">
+              <Button 
+                className="w-full bg-sightx-purple hover:bg-sightx-purple-light mb-3 flex gap-2 shadow-md shadow-sightx-purple/20"
+                size="sm"
+              >
                 <Plus className="h-4 w-4" />
                 Nova Conversa
               </Button>
@@ -147,90 +226,65 @@ const Sidebar = () => {
           )}
           
           {/* Navigation */}
-          <nav className="space-y-1 mb-6">
-            {isCompact ? (
+          <nav className="space-y-1 mt-3 mb-6">
+            {isCompact && !isHovering ? (
               <>
-                <HoverCard>
-                  <HoverCardTrigger asChild>
-                    <Link 
-                      to="/chat" 
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-md mx-auto",
-                        location.pathname === "/chat" || location.pathname.startsWith("/chat/") 
-                          ? "bg-sightx-purple/20 text-sightx-purple" 
-                          : "hover:bg-sightx-purple/10"
-                      )}
-                    >
-                      <MessageSquare className="h-5 w-5" />
-                    </Link>
-                  </HoverCardTrigger>
-                  <HoverCardContent side="right" align="start" className="p-2 text-sm">
-                    Chat
-                  </HoverCardContent>
-                </HoverCard>
-                
-                <HoverCard>
-                  <HoverCardTrigger asChild>
-                    <Link 
-                      to="/history" 
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-md mx-auto",
-                        location.pathname === "/history" 
-                          ? "bg-sightx-purple/20 text-sightx-purple" 
-                          : "hover:bg-sightx-purple/10"
-                      )}
-                    >
-                      <History className="h-5 w-5" />
-                    </Link>
-                  </HoverCardTrigger>
-                  <HoverCardContent side="right" align="start" className="p-2 text-sm">
-                    Histórico
-                  </HoverCardContent>
-                </HoverCard>
-                
-                <HoverCard>
-                  <HoverCardTrigger asChild>
-                    <Link 
-                      to="/profile" 
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-md mx-auto",
-                        location.pathname === "/profile" 
-                          ? "bg-sightx-purple/20 text-sightx-purple" 
-                          : "hover:bg-sightx-purple/10"
-                      )}
-                    >
-                      <User className="h-5 w-5" />
-                    </Link>
-                  </HoverCardTrigger>
-                  <HoverCardContent side="right" align="start" className="p-2 text-sm">
-                    Perfil
-                  </HoverCardContent>
-                </HoverCard>
+                <NavItem to="/chat" icon={MessageSquare} isCompact={true}>Chat</NavItem>
+                <NavItem to="/history" icon={History} isCompact={true}>Histórico</NavItem>
+                <NavItem to="/profile" icon={User} isCompact={true}>Perfil</NavItem>
               </>
             ) : (
               <>
-                <NavItem to="/chat" icon={MessageSquare} onClick={() => setIsOpen(false)}>
-                  Chat
-                </NavItem>
-                <NavItem to="/history" icon={History} onClick={() => setIsOpen(false)}>
-                  Histórico
-                </NavItem>
-                <NavItem to="/profile" icon={User} onClick={() => setIsOpen(false)}>
-                  Perfil
-                </NavItem>
+                <NavItem to="/chat" icon={MessageSquare}>Chat</NavItem>
+                <NavItem to="/history" icon={History}>Histórico</NavItem>
+                <NavItem to="/profile" icon={User}>Perfil</NavItem>
               </>
             )}
           </nav>
           
+          {/* Secondary Navigation */}
+          {(!isCompact || isHovering) && (
+            <>
+              <div className="px-3 mb-2">
+                <p className="text-xs text-muted-foreground mb-2">Preferências</p>
+                <div className="space-y-1">
+                  <button 
+                    className="flex items-center w-full gap-3 py-2 px-3 rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+                    onClick={toggleDarkMode}
+                  >
+                    <Sun className="h-5 w-5 dark:hidden" />
+                    <Moon className="h-5 w-5 hidden dark:block" />
+                    <span>Alternar tema</span>
+                  </button>
+                  <button className="flex items-center w-full gap-3 py-2 px-3 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
+                    <BellRing className="h-5 w-5" />
+                    <span>Notificações</span>
+                  </button>
+                  <button className="flex items-center w-full gap-3 py-2 px-3 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
+                    <Settings className="h-5 w-5" />
+                    <span>Configurações</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="px-3">
+                <button className="flex items-center w-full gap-3 py-2 px-3 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
+                  <HelpCircle className="h-5 w-5" />
+                  <span>Ajuda</span>
+                </button>
+              </div>
+            </>
+          )}
+          
           <div className="mt-auto">
-            <Separator className="my-4" />
+            <Separator className="my-3" />
             
             {/* User info */}
-            {isCompact ? (
+            {isCompact && !isHovering ? (
               <HoverCard>
                 <HoverCardTrigger asChild>
-                  <Button variant="ghost" className="w-10 h-10 rounded-full p-0 mx-auto">
-                    <Avatar className="h-9 w-9">
+                  <Button variant="ghost" className="w-10 h-10 rounded-full p-0 mx-auto block">
+                    <Avatar className="h-9 w-9 border-2 border-sightx-purple/20">
                       <AvatarImage src={user?.avatar} />
                       <AvatarFallback className="bg-sightx-purple text-white">
                         {user?.name?.charAt(0) || "U"}
@@ -238,15 +292,26 @@ const Sidebar = () => {
                     </Avatar>
                   </Button>
                 </HoverCardTrigger>
-                <HoverCardContent side="right" align="start" className="p-4 w-64">
-                  <div className="flex flex-col gap-2">
-                    <p className="font-medium">{user?.name}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                <HoverCardContent side="right" align="start" className="p-4 w-64 bg-card shadow-xl">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={user?.avatar} />
+                        <AvatarFallback className="bg-sightx-purple text-lg text-white">
+                          {user?.name?.charAt(0) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{user?.name}</p>
+                        <p className="text-xs text-muted-foreground">{user?.email}</p>
+                      </div>
+                    </div>
+                    <Separator />
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={logout}
-                      className="mt-2 w-full"
+                      className="w-full mt-1"
                     >
                       <LogOut className="h-4 w-4 mr-2" />
                       Sair
@@ -255,29 +320,27 @@ const Sidebar = () => {
                 </HoverCardContent>
               </HoverCard>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Avatar>
-                    <AvatarImage src={user?.avatar} />
-                    <AvatarFallback className="bg-sightx-purple text-white">
-                      {user?.name?.charAt(0) || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium">{user?.name}</p>
-                    <p className="text-xs text-muted-foreground truncate max-w-[140px]">
-                      {user?.email}
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3 px-3 py-2">
+                <Avatar className="h-10 w-10 border-2 border-sightx-purple/20">
+                  <AvatarImage src={user?.avatar} />
+                  <AvatarFallback className="bg-sightx-purple text-white">
+                    {user?.name?.charAt(0) || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user?.email}
+                  </p>
                 </div>
                 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={logout}
-                  className="text-muted-foreground hover:text-destructive"
+                  className="text-muted-foreground hover:text-destructive h-8 w-8"
                 >
-                  <LogOut className="h-5 w-5" />
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </div>
             )}
@@ -288,7 +351,7 @@ const Sidebar = () => {
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}

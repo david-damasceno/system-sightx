@@ -13,11 +13,24 @@ const mockResponses = [
   "Claro que posso ajudar com isso! Aqui estão algumas informações relevantes...",
 ];
 
+interface AiTypingState {
+  isTyping: boolean;
+  partialMessage: string;
+  fullMessage: string;
+  progress: number;
+}
+
 const useChat = (existingChatId?: string) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
+  const [aiTyping, setAiTyping] = useState<AiTypingState>({
+    isTyping: false,
+    partialMessage: "",
+    fullMessage: "",
+    progress: 0
+  });
 
   // Load chat sessions from local storage
   useEffect(() => {
@@ -88,6 +101,42 @@ const useChat = (existingChatId?: string) => {
     }
   }, [chatSession, existingChatId]);
 
+  // Simulate AI typing effect
+  useEffect(() => {
+    let interval: number | null = null;
+    
+    if (aiTyping.isTyping) {
+      interval = window.setInterval(() => {
+        setAiTyping(prev => {
+          const nextLen = Math.min(prev.fullMessage.length, prev.partialMessage.length + 2 + Math.floor(Math.random() * 3));
+          const nextPartial = prev.fullMessage.substring(0, nextLen);
+          const progress = nextLen / prev.fullMessage.length;
+          
+          // If complete, stop the interval
+          if (nextLen === prev.fullMessage.length) {
+            if (interval) clearInterval(interval);
+            return {
+              ...prev, 
+              partialMessage: prev.fullMessage,
+              progress: 1,
+              isTyping: false
+            };
+          }
+          
+          return {
+            ...prev,
+            partialMessage: nextPartial,
+            progress
+          };
+        });
+      }, 25); // Adjust speed as needed
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [aiTyping.isTyping]);
+
   const sendMessage = async (content: string, file?: File) => {
     if (!chatSession) return;
 
@@ -121,35 +170,61 @@ const useChat = (existingChatId?: string) => {
       // If there was a file attachment, add a comment about it
       const fileComment = file ? `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.` : '';
       
+      const fullContent = aiResponse + fileComment;
+
+      // Start typing effect
+      setAiTyping({
+        isTyping: true,
+        partialMessage: "",
+        fullMessage: fullContent,
+        progress: 0
+      });
+      
+      // Create AI message but don't add to messages yet - we'll update it during typing
       const aiMessage: Message = {
         id: uuidv4(),
-        content: aiResponse + fileComment,
+        content: "",
         senderId: "ai",
         timestamp: new Date(),
         isAI: true,
       };
 
-      // Update messages state
+      // Add the message with empty content, we'll update it via the typing effect
       setMessages(prev => [...prev, aiMessage]);
-      
-      // Update chat session
-      const updatedSession = {
-        ...chatSession,
-        messages: [...chatSession.messages, userMessage, aiMessage],
-        title: chatSession.messages.length === 0 ? generateChatTitle(content) : chatSession.title,
-        updatedAt: new Date(),
-      };
-      
-      setChatSession(updatedSession);
-      
-      // Update chat history
-      setChatHistory(prev => 
-        prev.map(chat => 
-          chat.id === updatedSession.id ? updatedSession : chat
-        )
-      );
-      
-      setIsProcessing(false);
+
+      // Set up interval to check typing status and finalize when done
+      const checkTypingInterval = setInterval(() => {
+        if (!aiTyping.isTyping) {
+          clearInterval(checkTypingInterval);
+          
+          // Finalize the message with the full content
+          setMessages(prev => 
+            prev.map(msg => msg.id === aiMessage.id 
+              ? {...msg, content: fullContent} 
+              : msg
+            )
+          );
+          
+          // Update chat session
+          const updatedSession = {
+            ...chatSession,
+            messages: [...chatSession.messages, userMessage, {...aiMessage, content: fullContent}],
+            title: chatSession.messages.length === 0 ? generateChatTitle(content) : chatSession.title,
+            updatedAt: new Date(),
+          };
+          
+          setChatSession(updatedSession);
+          
+          // Update chat history
+          setChatHistory(prev => 
+            prev.map(chat => 
+              chat.id === updatedSession.id ? updatedSession : chat
+            )
+          );
+          
+          setIsProcessing(false);
+        }
+      }, 100);
     }, Math.random() * 1000 + 1000);
   };
 
@@ -160,12 +235,33 @@ const useChat = (existingChatId?: string) => {
     return shortTitle.length < 20 ? shortTitle : shortTitle.substring(0, 20) + "...";
   };
 
+  const deleteChat = (chatId: string) => {
+    // Remove the chat from history
+    setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
+    
+    // Clear current session if that was the one deleted
+    if (chatSession?.id === chatId) {
+      setChatSession(null);
+      setMessages([]);
+    }
+  };
+
+  const clearAllChats = () => {
+    setChatHistory([]);
+    setChatSession(null);
+    setMessages([]);
+    localStorage.removeItem("sightx-chat-history");
+  };
+
   return {
     messages,
     sendMessage,
     isProcessing,
     chatSession,
     chatHistory,
+    aiTyping,
+    deleteChat,
+    clearAllChats
   };
 };
 

@@ -43,7 +43,7 @@
     --card: 260 15% 12%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 260 15% 10%;
+    --popover: 260 15% 12%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 272 60% 50%;
@@ -74,12 +74,38 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Custom scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+  
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 9999px;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 9999px;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-white/20 dark:bg-black/20 backdrop-blur-lg border border-white/30 dark:border-white/10 shadow-xl;
+    @apply bg-white/80 dark:bg-black/30 backdrop-blur-lg border border-white/30 dark:border-white/10 shadow-xl;
   }
   
   .message-bubble-ai {
@@ -98,3 +124,81 @@
     @apply bg-sightx-purple/20 dark:bg-sightx-purple/30 text-sightx-purple dark:text-sightx-purple-light font-medium;
   }
 }
+
+@layer utilities {
+  /* Animations */
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+  
+  @keyframes slide-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes shimmer {
+    from { background-position: -1000px 0; }
+    to { background-position: 1000px 0; }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+  
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s infinite;
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-shimmer {
+    background: linear-gradient(to right, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Glassmorphism effects */
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/10 dark:bg-black/20 border border-white/20 dark:border-white/5;
+  }
+  
+  .frosted-glass {
+    @apply backdrop-blur-xl bg-white/70 dark:bg-black/60 border border-white/30 dark:border-white/10;
+  }
+  
+  /* Custom interactivity */
+  .hover-scale {
+    @apply transition-all hover:scale-105;
+  }
+  
+  .hover-glow {
+    @apply transition-all hover:shadow-lg hover:shadow-sightx-purple/20;
+  }
+  
+  /* Extra utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+

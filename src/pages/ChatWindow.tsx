@@ -1,80 +1,170 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import useChat from "../hooks/useChat";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info, MessageCircle, FileText, Image as ImageIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const ChatWindow = () => {
   const { id } = useParams();
   const { user } = useAuth();
-  const { messages, sendMessage, isProcessing } = useChat(id);
+  const { messages, sendMessage, isProcessing, aiTyping } = useChat(id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
-  // Send message handler that accepts a file
+  // Send message handler
   const handleSendMessage = (content: string, file?: File) => {
     sendMessage(content, file);
+    setAutoScroll(true);
+  };
+
+  // Handle scroll events
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const isAtBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 10;
+    
+    setAutoScroll(isAtBottom);
+    setHasScrolled(true);
+    setShowScrollToBottom(!isAtBottom);
   };
 
   // Scroll to bottom when messages change
   useEffect(() => {
+    if (autoScroll && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, aiTyping.partialMessage, autoScroll]);
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    setAutoScroll(true);
+    setShowScrollToBottom(false);
+  };
 
   return (
     <div className="flex flex-col h-screen">
       {/* Chat header */}
-      <div className="border-b p-4 flex items-center justify-between bg-white/50 dark:bg-sightx-dark/50 backdrop-blur-sm">
+      <div className="border-b p-4 flex items-center justify-between bg-background/95 dark:bg-sightx-dark/95 backdrop-blur-lg shadow-sm z-10">
         <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-sightx-purple flex items-center justify-center mr-3">
+          <div className="w-10 h-10 rounded-full bg-sightx-purple flex items-center justify-center mr-3 shadow-lg animate-pulse-subtle">
             <img 
               src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
               alt="SightX Logo" 
-              className="h-5 w-5" 
+              className="h-6 w-6 object-contain" 
             />
           </div>
-          <h2 className="font-medium">Conversa com SightX</h2>
+          <div>
+            <h2 className="font-medium text-lg">SightX Assistant</h2>
+            <p className="text-xs text-muted-foreground">Inteligência artificial ao seu dispor</p>
+          </div>
         </div>
-        {isProcessing && (
-          <span className="text-xs text-muted-foreground animate-pulse flex items-center">
-            <span className="bg-sightx-purple/30 w-2 h-2 rounded-full mr-2"></span>
-            Processando...
-          </span>
-        )}
+        
+        <div className="flex items-center gap-2">
+          {isProcessing && (
+            <span className="text-xs text-muted-foreground animate-pulse flex items-center bg-sightx-purple/10 px-3 py-1 rounded-full">
+              <span className="bg-sightx-purple w-2 h-2 rounded-full mr-2"></span>
+              Processando
+            </span>
+          )}
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+                  <Info className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Sobre o SightX</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
       
       {/* Chat messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div 
+        className="flex-1 overflow-y-auto p-4 pt-6 space-y-6"
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+      >
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-8">
-            <div className="w-16 h-16 rounded-full bg-sightx-purple/10 flex items-center justify-center mb-4">
+          <div className="h-full flex flex-col items-center justify-center text-center p-8 animate-fade-in">
+            <div className="w-20 h-20 rounded-full bg-gradient-radial from-sightx-purple/20 to-sightx-purple/5 flex items-center justify-center mb-6 shadow-lg">
               <img 
                 src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
                 alt="SightX Logo" 
-                className="h-10 w-10" 
+                className="h-12 w-12 drop-shadow-md" 
               />
             </div>
-            <h2 className="text-xl font-medium text-sightx-purple mb-2">Bem-vindo ao SightX</h2>
-            <p className="text-muted-foreground max-w-md">
-              Comece a conversar com o SightX para obter respostas inteligentes para suas perguntas. 
-              Você pode anexar arquivos e receber análises detalhadas.
+            <h2 className="text-2xl font-semibold text-sightx-purple mb-3">Bem-vindo ao SightX</h2>
+            <p className="text-muted-foreground max-w-md mb-6">
+              Comece a conversar com o SightX para obter respostas inteligentes e análises detalhadas para suas perguntas.
             </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl w-full mt-4">
+              {[
+                {
+                  icon: MessageCircle,
+                  title: "Converse naturalmente",
+                  description: "Faça perguntas como se estivesse conversando com uma pessoa."
+                },
+                {
+                  icon: FileText,
+                  title: "Anexe documentos",
+                  description: "Envie documentos para análise e receberá insights detalhados."
+                },
+                {
+                  icon: ImageIcon,
+                  title: "Anexe imagens",
+                  description: "Compartilhe imagens para obter descrições e análises visuais."
+                }
+              ].map((item, i) => (
+                <div key={i} className="p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-shadow">
+                  <div className="mx-auto w-10 h-10 rounded-full bg-sightx-purple/10 flex items-center justify-center mb-3">
+                    <item.icon className="h-5 w-5 text-sightx-purple" />
+                  </div>
+                  <h3 className="font-medium text-base mb-1">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
-          messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              userAvatar={user?.avatar}
-            />
-          ))
+          messages.map((message, index) => {
+            // Check if this is the last AI message and is currently being typed
+            const isTyping = message.isAI && 
+                             index === messages.length - 1 && 
+                             aiTyping.isTyping;
+            
+            return (
+              <ChatMessage
+                key={message.id}
+                message={message}
+                userAvatar={user?.avatar}
+                typing={isTyping ? {
+                  isActive: true,
+                  partialContent: aiTyping.partialMessage
+                } : undefined}
+              />
+            );
+          })
         )}
         
         {/* AI is typing indicator */}
-        {isProcessing && (
-          <div className="flex items-center gap-2 animate-pulse ml-10">
+        {isProcessing && !aiTyping.isTyping && (
+          <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
             <div className="w-8 h-8 rounded-full bg-sightx-purple flex items-center justify-center">
               <img 
                 src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
@@ -82,7 +172,7 @@ const ChatWindow = () => {
                 className="h-5 w-5" 
               />
             </div>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-sightx-purple animate-pulse"></div>
               <div className="w-2 h-2 rounded-full bg-sightx-purple animate-pulse delay-150"></div>
               <div className="w-2 h-2 rounded-full bg-sightx-purple animate-pulse delay-300"></div>
@@ -92,6 +182,20 @@ const ChatWindow = () => {
         
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
+      </div>
+      
+      {/* Scroll to bottom button */}
+      <div className={cn(
+        "absolute bottom-24 right-6 transition-opacity duration-300",
+        showScrollToBottom ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}>
+        <Button
+          size="icon"
+          className="rounded-full h-10 w-10 bg-sightx-purple hover:bg-sightx-purple-light shadow-lg"
+          onClick={scrollToBottom}
+        >
+          <MessageCircle className="h-5 w-5" />
+        </Button>
       </div>
       
       {/* Chat input */}
