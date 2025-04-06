@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,7 +12,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
 const ChatWindow = () => {
   const {
     id
@@ -131,60 +129,9 @@ const ChatWindow = () => {
       toast.info("Compartilhamento não suportado neste navegador");
     }
   };
-  
   return <div className="flex flex-col h-screen">
       {/* Chat header - simplificado sem os textos "Donna" */}
-      <div className="border-b p-4 flex items-center justify-between bg-background/95 dark:bg-sightx-dark/95 backdrop-blur-lg shadow-sm z-10">
-        <div className="flex-1"></div>
-        
-        <div className="flex items-center gap-2">
-          {isProcessing && <span className="text-xs text-muted-foreground animate-pulse flex items-center bg-sightx-purple/10 px-3 py-1 rounded-full">
-              <span className="bg-sightx-purple w-2 h-2 rounded-full mr-2"></span>
-              Processando
-            </span>}
-          
-          {messages.length > 1 && <>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={() => setShowSearch(true)}>
-                      <Search className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Buscar na conversa</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={exportChat}>
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Exportar conversa</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={shareChat}>
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Compartilhar</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </>}
-        </div>
-      </div>
+      
       
       {/* Search overlay */}
       {showSearch && <MessageSearch messages={messages} onSearchResult={handleSearchResult} onClose={() => setShowSearch(false)} />}
@@ -260,5 +207,4 @@ const ChatWindow = () => {
       <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} onOpenSearch={() => setShowSearch(true)} messages={messages} />
     </div>;
 };
-
 export default ChatWindow;
