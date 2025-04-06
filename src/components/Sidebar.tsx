@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -82,12 +81,10 @@ const Sidebar = () => {
   const sidebarRef = useRef<HTMLElement>(null);
   const { toast } = useToast();
 
-  // Close mobile sidebar when route changes
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
 
-  // Toggle dark mode function
   const toggleDarkMode = () => {
     const isDark = document.documentElement.classList.contains('dark');
     if (isDark) {
@@ -107,14 +104,12 @@ const Sidebar = () => {
     }
   };
 
-  // Toggle sidebar compact mode
   const toggleCompactMode = () => {
     setIsCompact(!isCompact);
   };
 
   return (
     <>
-      {/* Mobile menu button */}
       <Button
         variant="ghost"
         size="icon"
@@ -124,7 +119,6 @@ const Sidebar = () => {
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
       
-      {/* Sidebar */}
       <aside
         ref={sidebarRef}
         className={cn(
@@ -134,24 +128,19 @@ const Sidebar = () => {
         )}
       >
         <div className="flex-none p-3">
-          {/* Logo and toggle button */}
           <div
             className={cn(
               "flex items-center py-4 transition-all duration-300",
               isCompact ? "justify-center px-0" : "px-3"
             )}
           >
-            <div
+            <img
+              src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png"
+              alt="SightX Logo"
               className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-sightx-purple"
+                "h-10 w-10 object-contain p-2 rounded-xl shadow-lg bg-sightx-purple"
               )}
-            >
-              <img
-                src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png"
-                alt="SightX Logo"
-                className="h-6 w-6 object-contain"
-              />
-            </div>
+            />
             
             <h1
               className={cn(
@@ -162,7 +151,6 @@ const Sidebar = () => {
               SightX
             </h1>
             
-            {/* Toggle compact button - only on desktop */}
             <Button
               variant="ghost"
               size="icon"
@@ -179,10 +167,8 @@ const Sidebar = () => {
           
           <Separator className="my-3" />
           
-          {/* Mode Toggle */}
           {!isCompact && <ModeToggle />}
           
-          {/* New Chat button */}
           {isCompact ? (
             <NavItem to="/chat" icon={Plus} isCompact={true} isActive={false}>
               Nova Conversa
@@ -200,7 +186,6 @@ const Sidebar = () => {
           )}
         </div>
           
-        {/* Navigation - with ScrollArea for independent scrolling */}
         <ScrollArea className="flex-1 px-3">
           <nav className="space-y-1 mt-3 mb-6">
             {isCompact ? (
@@ -242,7 +227,6 @@ const Sidebar = () => {
             )}
           </nav>
           
-          {/* Secondary Navigation */}
           {!isCompact && (
             <>
               <div className="px-3 mb-2">
@@ -280,7 +264,6 @@ const Sidebar = () => {
         <div className="flex-none p-3">
           <Separator className="my-3" />
           
-          {/* User info */}
           {isCompact ? (
             <Button
               variant="ghost"
@@ -330,7 +313,6 @@ const Sidebar = () => {
         </div>
       </aside>
       
-      {/* Overlay for mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
