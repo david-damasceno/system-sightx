@@ -133,7 +133,7 @@ const ChatWindow = () => {
       {/* Chat header */}
       <div className="border-b p-4 flex items-center justify-between bg-background/95 dark:bg-sightx-dark/95 backdrop-blur-lg shadow-sm z-10">
         <div className="flex items-center">
-          <div className="py-[6px]">
+          <div className="py-0">
             <div className="flex items-center gap-2">
               <h2 className="font-medium text-lg">Donna</h2>
               <Badge variant={mode === "business" ? "business" : "personal"} className="text-xs flex items-center gap-1">
