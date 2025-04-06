@@ -32,7 +32,11 @@
     --border: 260 20% 90%;
     --input: 260 20% 90%;
     --ring: 272 60% 42%;
-
+    
+    /* Business mode colors */
+    --business-primary: 210 100% 40%;
+    --business-secondary: 200 90% 60%;
+    
     --radius: 0.75rem;
   }
 
@@ -64,6 +68,16 @@
     --border: 260 15% 20%;
     --input: 260 15% 20%;
     --ring: 260 60% 60%;
+    
+    /* Business mode dark colors */
+    --business-primary: 210 90% 50%;
+    --business-secondary: 200 80% 70%;
+  }
+  
+  .context-business {
+    --primary: var(--business-primary);
+    --secondary: var(--business-secondary);
+    --ring: var(--business-primary);
   }
 }
 
@@ -109,11 +123,19 @@
   }
   
   .message-bubble-ai {
-    @apply bg-sightx-purple text-white rounded-2xl rounded-tl-sm p-4 shadow-md;
+    @apply bg-sightx-purple text-white rounded-2xl rounded-tl-sm p-4 shadow-md dark:shadow-black/30;
   }
   
   .message-bubble-user {
-    @apply bg-sightx-green rounded-2xl rounded-tr-sm p-4 shadow-md text-black;
+    @apply bg-sightx-green rounded-2xl rounded-tr-sm p-4 shadow-md dark:shadow-black/30 text-black;
+  }
+  
+  .context-business .message-bubble-ai {
+    @apply bg-blue-600;
+  }
+  
+  .context-business .message-bubble-user {
+    @apply bg-sky-400;
   }
   
   .nav-link {
@@ -122,6 +144,23 @@
   
   .nav-link.active {
     @apply bg-sightx-purple/20 dark:bg-sightx-purple/30 text-sightx-purple dark:text-sightx-purple-light font-medium;
+  }
+  
+  .context-business .nav-link {
+    @apply hover:bg-blue-600/10 dark:hover:bg-blue-400/20;
+  }
+  
+  .context-business .nav-link.active {
+    @apply bg-blue-600/20 dark:bg-blue-400/30 text-blue-600 dark:text-blue-300 font-medium;
+  }
+  
+  /* Suavize transições de hover */
+  .btn-hover-effect {
+    @apply transition-all duration-300 ease-in-out hover:scale-105 active:scale-95;
+  }
+  
+  .link-hover-effect {
+    @apply transition-all duration-200 ease-in-out hover:text-opacity-80;
   }
 }
 
@@ -185,11 +224,15 @@
   
   /* Custom interactivity */
   .hover-scale {
-    @apply transition-all hover:scale-105;
+    @apply transition-all duration-300 hover:scale-[1.02];
   }
   
   .hover-glow {
-    @apply transition-all hover:shadow-lg hover:shadow-sightx-purple/20;
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-sightx-purple/20;
+  }
+  
+  .context-business .hover-glow {
+    @apply hover:shadow-blue-600/20;
   }
   
   /* Extra utilities */
@@ -201,4 +244,3 @@
     text-wrap: pretty;
   }
 }
-

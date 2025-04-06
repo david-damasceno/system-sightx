@@ -9,6 +9,9 @@ import { Loader2, Info, MessageCircle, FileText, Image as ImageIcon } from "luci
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useContextMode } from "@/hooks/use-context-mode";
+import SightXLogo from "@/components/SightXLogo";
+import ContextModeToggle from "@/components/ContextModeToggle";
 
 const ChatWindow = () => {
   const { id } = useParams();
@@ -19,6 +22,7 @@ const ChatWindow = () => {
   const [hasScrolled, setHasScrolled] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const { contextMode } = useContextMode();
 
   // Send message handler
   const handleSendMessage = (content: string, file?: File) => {
@@ -53,27 +57,38 @@ const ChatWindow = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className={cn("flex flex-col h-screen", contextMode === 'business' && "context-business")}>
       {/* Chat header */}
       <div className="border-b p-4 flex items-center justify-between bg-background/95 dark:bg-sightx-dark/95 backdrop-blur-lg shadow-sm z-10">
         <div className="flex items-center">
-          <div className="w-10 h-10 rounded-full bg-sightx-purple flex items-center justify-center mr-3 shadow-lg animate-pulse-subtle">
-            <img 
-              src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-              alt="SightX Logo" 
-              className="h-6 w-6 object-contain" 
-            />
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center mr-3 shadow-lg animate-pulse-subtle",
+            contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
+          )}>
+            <SightXLogo size="sm" colorClass="text-white" />
           </div>
           <div>
             <h2 className="font-medium text-lg">SightX Assistant</h2>
-            <p className="text-xs text-muted-foreground">Inteligência artificial ao seu dispor</p>
+            <p className="text-xs text-muted-foreground">
+              {contextMode === 'business' 
+                ? "Modo Empresarial - Análises e relatórios" 
+                : "Modo Pessoal - Assistente pessoal"}
+            </p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <ContextModeToggle variant="small" />
+          
           {isProcessing && (
-            <span className="text-xs text-muted-foreground animate-pulse flex items-center bg-sightx-purple/10 px-3 py-1 rounded-full">
-              <span className="bg-sightx-purple w-2 h-2 rounded-full mr-2"></span>
+            <span className={cn(
+              "text-xs text-muted-foreground animate-pulse flex items-center px-3 py-1 rounded-full",
+              contextMode === 'business' ? "bg-blue-600/10" : "bg-sightx-purple/10"
+            )}>
+              <span className={cn(
+                "w-2 h-2 rounded-full mr-2",
+                contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
+              )}></span>
               Processando
             </span>
           )}
@@ -101,16 +116,25 @@ const ChatWindow = () => {
       >
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-8 animate-fade-in">
-            <div className="w-20 h-20 rounded-full bg-gradient-radial from-sightx-purple/20 to-sightx-purple/5 flex items-center justify-center mb-6 shadow-lg">
-              <img 
-                src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-                alt="SightX Logo" 
-                className="h-12 w-12 drop-shadow-md" 
-              />
+            <div className={cn(
+              "w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-lg",
+              contextMode === 'business'
+                ? "bg-gradient-radial from-blue-600/20 to-blue-600/5"
+                : "bg-gradient-radial from-sightx-purple/20 to-sightx-purple/5"
+            )}>
+              <SightXLogo size="lg" colorClass={contextMode === 'business' ? "text-blue-600" : "text-sightx-purple"} />
             </div>
-            <h2 className="text-2xl font-semibold text-sightx-purple mb-3">Bem-vindo ao SightX</h2>
+            <h2 className={cn(
+              "text-2xl font-semibold mb-3",
+              contextMode === 'business' ? "text-blue-600" : "text-sightx-purple"
+            )}>
+              {contextMode === 'business' ? "SightX Empresarial" : "Bem-vindo ao SightX"}
+            </h2>
             <p className="text-muted-foreground max-w-md mb-6">
-              Comece a conversar com o SightX para obter respostas inteligentes e análises detalhadas para suas perguntas.
+              {contextMode === 'business'
+                ? "Assistente especializado em análises de negócios, documentos corporativos e relatórios."
+                : "Comece a conversar com o SightX para obter respostas inteligentes e análises detalhadas para suas perguntas."
+              }
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl w-full mt-4">
@@ -131,9 +155,21 @@ const ChatWindow = () => {
                   description: "Compartilhe imagens para obter descrições e análises visuais."
                 }
               ].map((item, i) => (
-                <div key={i} className="p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-shadow">
-                  <div className="mx-auto w-10 h-10 rounded-full bg-sightx-purple/10 flex items-center justify-center mb-3">
-                    <item.icon className="h-5 w-5 text-sightx-purple" />
+                <div 
+                  key={i} 
+                  className={cn(
+                    "p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-shadow hover-scale",
+                    contextMode === 'business' ? "hover-scale hover:shadow-blue-600/10" : "hover:shadow-sightx-purple/10"
+                  )}
+                >
+                  <div className={cn(
+                    "mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-3",
+                    contextMode === 'business' ? "bg-blue-600/10" : "bg-sightx-purple/10"
+                  )}>
+                    <item.icon className={cn(
+                      "h-5 w-5",
+                      contextMode === 'business' ? "text-blue-600" : "text-sightx-purple"
+                    )} />
                   </div>
                   <h3 className="font-medium text-base mb-1">{item.title}</h3>
                   <p className="text-xs text-muted-foreground">{item.description}</p>
@@ -165,17 +201,25 @@ const ChatWindow = () => {
         {/* AI is typing indicator */}
         {isProcessing && !aiTyping.isTyping && (
           <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
-            <div className="w-8 h-8 rounded-full bg-sightx-purple flex items-center justify-center">
-              <img 
-                src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-                alt="SightX Logo" 
-                className="h-5 w-5" 
-              />
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center",
+              contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
+            )}>
+              <SightXLogo size="sm" colorClass="text-white" />
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-sightx-purple animate-pulse"></div>
-              <div className="w-2 h-2 rounded-full bg-sightx-purple animate-pulse delay-150"></div>
-              <div className="w-2 h-2 rounded-full bg-sightx-purple animate-pulse delay-300"></div>
+              <div className={cn(
+                "w-2 h-2 rounded-full animate-pulse",
+                contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
+              )}></div>
+              <div className={cn(
+                "w-2 h-2 rounded-full animate-pulse delay-150",
+                contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
+              )}></div>
+              <div className={cn(
+                "w-2 h-2 rounded-full animate-pulse delay-300",
+                contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
+              )}></div>
             </div>
           </div>
         )}
@@ -191,7 +235,12 @@ const ChatWindow = () => {
       )}>
         <Button
           size="icon"
-          className="rounded-full h-10 w-10 bg-sightx-purple hover:bg-sightx-purple-light shadow-lg"
+          className={cn(
+            "rounded-full h-10 w-10 shadow-lg",
+            contextMode === 'business' 
+              ? "bg-blue-600 hover:bg-blue-700"
+              : "bg-sightx-purple hover:bg-sightx-purple-light"
+          )}
           onClick={scrollToBottom}
         >
           <MessageCircle className="h-5 w-5" />
