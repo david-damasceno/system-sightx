@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -60,27 +59,12 @@ const ChatWindow = () => {
       {/* Chat header */}
       <div className="border-b p-4 flex items-center justify-between bg-background/95 dark:bg-sightx-dark/95 backdrop-blur-lg shadow-sm z-10">
         <div className="flex items-center">
-          <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center mr-3 shadow-lg animate-pulse-subtle",
-            mode === "business" ? "bg-sightx-green" : "bg-sightx-purple"
-          )}>
-            <img 
-              src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-              alt="SightX Logo" 
-              className="h-6 w-6 object-contain" 
-            />
-          </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-medium text-lg">SightX Assistant</h2>
               <Badge 
-                variant="outline" 
-                className={cn(
-                  "text-xs flex items-center gap-1",
-                  mode === "business" 
-                    ? "border-sightx-green/30 text-sightx-green" 
-                    : "border-sightx-purple/30 text-sightx-purple"
-                )}
+                variant={mode === "business" ? "business" : "personal"}
+                className="text-xs flex items-center gap-1"
               >
                 {mode === "business" ? (
                   <>

@@ -170,7 +170,7 @@ const Sidebar = () => {
         <div className="flex flex-col h-full p-3">
           {/* Logo */}
           <div className={cn(
-            "flex items-center justify-center py-4 transition-all duration-300",
+            "flex items-center py-4 transition-all duration-300",
             isCompact && !isHovering ? "justify-center px-0" : "px-3"
           )}>
             <div className={cn(
@@ -192,13 +192,6 @@ const Sidebar = () => {
               SightX
             </h1>
             
-            {/* Mode indicator for compact view */}
-            {isCompact && !isHovering && (
-              <div className="absolute top-4 right-3">
-                <ModeIndicator />
-              </div>
-            )}
-
             {/* Toggle compact button - only on desktop */}
             <Button
               variant="ghost"
