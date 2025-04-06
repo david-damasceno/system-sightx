@@ -24,9 +24,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
-import { useContextMode } from "@/hooks/use-context-mode";
-import ContextModeToggle from "./ContextModeToggle";
-import SightXLogo from "./SightXLogo";
 
 const NavItem = ({
   to,
@@ -46,7 +43,6 @@ const NavItem = ({
   const { pathname } = useLocation();
   const isActive = forced !== undefined ? forced : pathname === to || pathname.startsWith(`${to}/`);
   const [isHovered, setIsHovered] = useState(false);
-  const { contextMode } = useContextMode();
   
   if (isCompact) {
     return (
@@ -57,11 +53,8 @@ const NavItem = ({
             className={cn(
               "flex h-10 w-10 items-center justify-center rounded-xl mx-auto mb-1 transition-all duration-300",
               isActive 
-                ? contextMode === 'business'
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                  : "bg-sightx-purple text-white shadow-md shadow-sightx-purple/20"
+                ? "bg-sightx-purple text-white shadow-md shadow-sightx-purple/20"
                 : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple",
-              contextMode === 'business' && "hover:bg-blue-600/10 hover:text-blue-600",
               isHovered && !isActive && "scale-110"
             )}
             onClick={onClick}
@@ -84,9 +77,7 @@ const NavItem = ({
       className={cn(
         "flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-300 group",
         isActive 
-          ? contextMode === 'business'
-            ? "bg-blue-600 text-white font-medium shadow-md shadow-blue-600/20"
-            : "bg-sightx-purple text-white font-medium shadow-md shadow-sightx-purple/20"
+          ? "bg-sightx-purple text-white font-medium shadow-md shadow-sightx-purple/20"
           : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple"
       )}
       onClick={onClick}
@@ -110,7 +101,6 @@ const Sidebar = () => {
   const location = useLocation();
   const sidebarRef = useRef<HTMLElement>(null);
   const { toast } = useToast();
-  const { contextMode } = useContextMode();
   
   // Expand sidebar on hover when in compact mode
   const handleMouseEnter = () => {
@@ -169,7 +159,6 @@ const Sidebar = () => {
           "bg-background/95 dark:bg-sightx-dark/95 fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out shadow-lg border-r border-border/50 md:relative backdrop-blur-lg",
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           isCompact && !isHovering ? "md:w-[70px]" : "md:w-64",
-          contextMode === 'business' && "context-business"
         )}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -180,16 +169,16 @@ const Sidebar = () => {
             "flex items-center justify-center py-4 transition-all duration-300",
             isCompact && !isHovering ? "justify-center px-0" : "px-3"
           )}>
-            <div className={cn(
-              "rounded-xl flex items-center justify-center shadow-lg p-2",
-              contextMode === 'business' ? "bg-blue-600 shadow-blue-600/20" : "bg-sightx-purple shadow-sightx-purple/20"
-            )}>
-              <SightXLogo size="sm" colorClass="text-white" />
+            <div className="w-10 h-10 rounded-xl bg-sightx-purple flex items-center justify-center shadow-lg">
+              <img 
+                src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
+                alt="SightX Logo" 
+                className="h-6 w-6 object-contain" 
+              />
             </div>
             
             <h1 className={cn(
-              "text-xl font-bold ml-2 transition-all duration-300",
-              contextMode === 'business' ? "text-blue-600" : "text-sightx-purple",
+              "text-xl font-bold text-sightx-purple ml-2 transition-all duration-300",
               isCompact && !isHovering ? "opacity-0 w-0" : "opacity-100"
             )}>
               SightX
@@ -212,17 +201,6 @@ const Sidebar = () => {
             </Button>
           </div>
           
-          {/* Context switcher */}
-          {isCompact && !isHovering ? (
-            <div className="flex justify-center mb-3 mt-1">
-              <ContextModeToggle variant="small" />
-            </div>
-          ) : (
-            <div className="px-2 mb-1">
-              <ContextModeToggle />
-            </div>
-          )}
-          
           <Separator className="my-3" />
           
           {/* New Chat button */}
@@ -238,12 +216,7 @@ const Sidebar = () => {
           ) : (
             <Link to="/chat">
               <Button 
-                className={cn(
-                  "w-full mb-3 flex gap-2 shadow-md",
-                  contextMode === 'business' 
-                    ? "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20" 
-                    : "bg-sightx-purple hover:bg-sightx-purple-light shadow-sightx-purple/20"
-                )}
+                className="w-full bg-sightx-purple hover:bg-sightx-purple-light mb-3 flex gap-2 shadow-md shadow-sightx-purple/20"
                 size="sm"
               >
                 <Plus className="h-4 w-4" />
@@ -311,15 +284,9 @@ const Sidebar = () => {
               <HoverCard>
                 <HoverCardTrigger asChild>
                   <Button variant="ghost" className="w-10 h-10 rounded-full p-0 mx-auto block">
-                    <Avatar className={cn(
-                      "h-9 w-9 border-2",
-                      contextMode === 'business' ? "border-blue-600/20" : "border-sightx-purple/20"
-                    )}>
+                    <Avatar className="h-9 w-9 border-2 border-sightx-purple/20">
                       <AvatarImage src={user?.avatar} />
-                      <AvatarFallback className={cn(
-                        "text-white",
-                        contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
-                      )}>
+                      <AvatarFallback className="bg-sightx-purple text-white">
                         {user?.name?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -330,10 +297,7 @@ const Sidebar = () => {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={user?.avatar} />
-                        <AvatarFallback className={cn(
-                          "text-lg text-white",
-                          contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
-                        )}>
+                        <AvatarFallback className="bg-sightx-purple text-lg text-white">
                           {user?.name?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -357,15 +321,9 @@ const Sidebar = () => {
               </HoverCard>
             ) : (
               <div className="flex items-center gap-3 px-3 py-2">
-                <Avatar className={cn(
-                  "h-10 w-10 border-2",
-                  contextMode === 'business' ? "border-blue-600/20" : "border-sightx-purple/20"
-                )}>
+                <Avatar className="h-10 w-10 border-2 border-sightx-purple/20">
                   <AvatarImage src={user?.avatar} />
-                  <AvatarFallback className={cn(
-                    "text-white",
-                    contextMode === 'business' ? "bg-blue-600" : "bg-sightx-purple"
-                  )}>
+                  <AvatarFallback className="bg-sightx-purple text-white">
                     {user?.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
@@ -380,7 +338,7 @@ const Sidebar = () => {
                   variant="ghost"
                   size="icon"
                   onClick={logout}
-                  className="text-muted-foreground hover:text-destructive h-8 w-8 transition-all duration-200"
+                  className="text-muted-foreground hover:text-destructive h-8 w-8"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>

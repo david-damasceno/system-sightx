@@ -13,28 +13,15 @@ import ChatHistory from "./pages/ChatHistory";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
-import { useContextMode } from "./hooks/use-context-mode";
-import { cn } from "./lib/utils";
 
-const ContextWrapper = ({ children }: { children: React.ReactNode }) => {
-  const { contextMode } = useContextMode();
-  
-  return (
-    <div className={cn(
-      "app-container",
-      contextMode === 'business' && "context-business"
-    )}>
-      {children}
-    </div>
-  );
-};
+const queryClient = new QueryClient();
 
-const AppContent = () => {
-  return (
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <ContextWrapper>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
         <BrowserRouter>
           <Routes>
             {/* Auth Routes */}
@@ -54,17 +41,7 @@ const AppContent = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </ContextWrapper>
-    </TooltipProvider>
-  );
-};
-
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <AppContent />
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import SightXLogo from "@/components/SightXLogo";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -34,8 +32,12 @@ const Login = () => {
     <div className="w-full max-w-md px-4">
       <div className={`flex justify-center mb-8 transition-all duration-700 ${animateElements ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform -translate-y-8'}`}>
         <div className="flex flex-col items-center gap-3">
-          <div className="rounded-xl bg-sightx-purple flex items-center justify-center shadow-lg shadow-sightx-purple/20 mb-2 p-3">
-            <SightXLogo size="lg" colorClass="text-white" />
+          <div className="w-16 h-16 rounded-xl bg-sightx-purple flex items-center justify-center shadow-lg shadow-sightx-purple/20 mb-2">
+            <img 
+              src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
+              alt="SightX Logo" 
+              className="h-10 w-10 object-contain"
+            />
           </div>
           <h1 className="text-3xl font-bold text-sightx-purple">
             SightX
@@ -75,7 +77,7 @@ const Login = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                <Button variant="link" size="sm" className="text-xs p-0 h-auto link-hover-effect">
+                <Button variant="link" size="sm" className="text-xs p-0 h-auto">
                   Esqueceu a senha?
                 </Button>
               </div>
@@ -93,7 +95,7 @@ const Login = () => {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 transition-opacity hover:opacity-80"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -108,7 +110,7 @@ const Login = () => {
           <CardFooter className="flex flex-col gap-4 pt-2">
             <Button 
               type="submit" 
-              className="w-full bg-sightx-purple hover:bg-sightx-purple-light h-11 shadow-lg shadow-sightx-purple/20 transition-all duration-300 hover:shadow-xl hover:shadow-sightx-purple/30"
+              className="w-full bg-sightx-purple hover:bg-sightx-purple-light h-11 shadow-lg shadow-sightx-purple/20 transition-all hover:shadow-xl hover:shadow-sightx-purple/30"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -131,20 +133,14 @@ const Login = () => {
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="outline" 
-                className="bg-white/50 dark:bg-black/50 transition-all duration-300 hover:bg-white/70 dark:hover:bg-black/60"
-              >
+              <Button variant="outline" className="bg-white/50 dark:bg-black/50">
                 <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWdvb2dsZSI+PHBhdGggZD0iTTE0LjYyIDE0LjYyYy0xLjkzIDEuOTMtNS42NiAyLTcuNjYgMC0xLjcyLTEuNzItMS44Mi00LjMzLS4zMi02LjE2UzkuMjIgNi42NCAxMS41IDYuNjRjMS4xOCAwIDIuMzIuNDggMyAxLjMyIj48L3BhdGg+PHBhdGggZD0iTTExLjUgMTJIMTl2Mi4yNWMwIDEuNTMtMC45IDIuOTgtMi4zMSAzLjY2TDEzLjUgMjAiPjwvcGF0aD48cGF0aCBkPSJNMTkgMTBoLTEuNWExLjUgMS41IDAgMCAxLTEuNS0xLjUxdi0ulRCwgdjEuNVYxMGgyIj48L3BhdGg+PC9zdmc+" 
                   alt="Google" 
                   className="w-4 h-4 mr-2"
                 />
                 <span className="text-sm">Google</span>
               </Button>
-              <Button 
-                variant="outline" 
-                className="bg-white/50 dark:bg-black/50 transition-all duration-300 hover:bg-white/70 dark:hover:bg-black/60"
-              >
+              <Button variant="outline" className="bg-white/50 dark:bg-black/50">
                 <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWdpdGh1YiI+PHBhdGggZD0iTTE1IDIydi00YTQuOCA0LjggMCAwIDAtMS0zLjVjMyAwIDYtMiA2LTUuNS4wOC0xLjI1LS4yNi0yLjQ4LTEtMy41LjA4LS43OS4yLTIuNS0xLTMtMS45OSAwLTMuMiAxLTMuOCAyQzEyLjgyIDQgMTAgNCA4IDVjLTEyIDAtMi41IDAtMSAzYTQuOCA0LjggMCAwIDAtMSAzLjVjMCAzLjUgMyA1LjUgNiA1LjVhNC44IDQuOCAwIDAgMC0xIDMuNXY0Ij48L3BhdGg+PHBhdGggZD0iTTkgMjJjLTQuIDEuOC04IDEtOC0zIj48L3BhdGg+PC9zdmc+"
                   alt="GitHub"
                   className="w-4 h-4 mr-2"
