@@ -13,35 +13,38 @@ import ChatHistory from "./pages/ChatHistory";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ModeProvider } from "./contexts/ModeContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Auth Routes */}
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<Login />} />
-            </Route>
+      <ModeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Auth Routes */}
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<Login />} />
+              </Route>
 
-            {/* App Routes */}
-            <Route element={<ChatLayout />}>
-              <Route path="/" element={<Navigate to="/chat" replace />} />
-              <Route path="/chat" element={<ChatWindow />} />
-              <Route path="/chat/:id" element={<ChatWindow />} />
-              <Route path="/history" element={<ChatHistory />} />
-              <Route path="/profile" element={<Profile />} />
-            </Route>
+              {/* App Routes */}
+              <Route element={<ChatLayout />}>
+                <Route path="/" element={<Navigate to="/chat" replace />} />
+                <Route path="/chat" element={<ChatWindow />} />
+                <Route path="/chat/:id" element={<ChatWindow />} />
+                <Route path="/history" element={<ChatHistory />} />
+                <Route path="/profile" element={<Profile />} />
+              </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ModeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

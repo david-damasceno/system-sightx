@@ -2,8 +2,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useMode } from "../contexts/ModeContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ModeToggle, ModeIndicator } from "./ModeToggle";
 import {
   MessageSquare,
   History,
@@ -18,7 +20,8 @@ import {
   BellRing,
   HelpCircle,
   Moon,
-  Sun
+  Sun,
+  Briefcase
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -98,6 +101,7 @@ const Sidebar = () => {
   const [isCompact, setIsCompact] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const { user, logout } = useAuth();
+  const { mode } = useMode();
   const location = useLocation();
   const sidebarRef = useRef<HTMLElement>(null);
   const { toast } = useToast();
@@ -169,7 +173,10 @@ const Sidebar = () => {
             "flex items-center justify-center py-4 transition-all duration-300",
             isCompact && !isHovering ? "justify-center px-0" : "px-3"
           )}>
-            <div className="w-10 h-10 rounded-xl bg-sightx-purple flex items-center justify-center shadow-lg">
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg",
+              mode === "business" ? "bg-sightx-green" : "bg-sightx-purple"
+            )}>
               <img 
                 src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
                 alt="SightX Logo" 
@@ -178,11 +185,19 @@ const Sidebar = () => {
             </div>
             
             <h1 className={cn(
-              "text-xl font-bold text-sightx-purple ml-2 transition-all duration-300",
+              "text-xl font-bold ml-2 transition-all duration-300",
+              mode === "business" ? "text-sightx-green" : "text-sightx-purple",
               isCompact && !isHovering ? "opacity-0 w-0" : "opacity-100"
             )}>
               SightX
             </h1>
+            
+            {/* Mode indicator for compact view */}
+            {isCompact && !isHovering && (
+              <div className="absolute top-4 right-3">
+                <ModeIndicator />
+              </div>
+            )}
 
             {/* Toggle compact button - only on desktop */}
             <Button
@@ -203,6 +218,9 @@ const Sidebar = () => {
           
           <Separator className="my-3" />
           
+          {/* Mode Toggle */}
+          {(!isCompact || isHovering) && <ModeToggle />}
+          
           {/* New Chat button */}
           {isCompact && !isHovering ? (
             <NavItem 
@@ -216,7 +234,12 @@ const Sidebar = () => {
           ) : (
             <Link to="/chat">
               <Button 
-                className="w-full bg-sightx-purple hover:bg-sightx-purple-light mb-3 flex gap-2 shadow-md shadow-sightx-purple/20"
+                className={cn(
+                  "w-full mb-3 flex gap-2 shadow-md",
+                  mode === "business" 
+                    ? "bg-sightx-green hover:bg-sightx-green/90 shadow-sightx-green/20" 
+                    : "bg-sightx-purple hover:bg-sightx-purple-light shadow-sightx-purple/20"
+                )}
                 size="sm"
               >
                 <Plus className="h-4 w-4" />
@@ -284,9 +307,15 @@ const Sidebar = () => {
               <HoverCard>
                 <HoverCardTrigger asChild>
                   <Button variant="ghost" className="w-10 h-10 rounded-full p-0 mx-auto block">
-                    <Avatar className="h-9 w-9 border-2 border-sightx-purple/20">
+                    <Avatar className={cn(
+                      "h-9 w-9 border-2",
+                      mode === "business" ? "border-sightx-green/20" : "border-sightx-purple/20"
+                    )}>
                       <AvatarImage src={user?.avatar} />
-                      <AvatarFallback className="bg-sightx-purple text-white">
+                      <AvatarFallback className={cn(
+                        "text-white",
+                        mode === "business" ? "bg-sightx-green" : "bg-sightx-purple"
+                      )}>
                         {user?.name?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -297,7 +326,10 @@ const Sidebar = () => {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={user?.avatar} />
-                        <AvatarFallback className="bg-sightx-purple text-lg text-white">
+                        <AvatarFallback className={cn(
+                          "text-lg text-white",
+                          mode === "business" ? "bg-sightx-green" : "bg-sightx-purple"
+                        )}>
                           {user?.name?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -321,9 +353,15 @@ const Sidebar = () => {
               </HoverCard>
             ) : (
               <div className="flex items-center gap-3 px-3 py-2">
-                <Avatar className="h-10 w-10 border-2 border-sightx-purple/20">
+                <Avatar className={cn(
+                  "h-10 w-10 border-2",
+                  mode === "business" ? "border-sightx-green/20" : "border-sightx-purple/20"
+                )}>
                   <AvatarImage src={user?.avatar} />
-                  <AvatarFallback className="bg-sightx-purple text-white">
+                  <AvatarFallback className={cn(
+                    "text-white",
+                    mode === "business" ? "bg-sightx-green" : "bg-sightx-purple"
+                  )}>
                     {user?.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
