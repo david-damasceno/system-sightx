@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { FileText, Image, Film, File, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import MessageReactions from "./MessageReactions";
 
 interface ChatMessageProps {
   message: Message;
@@ -14,9 +15,10 @@ interface ChatMessageProps {
     isActive: boolean;
     partialContent?: string;
   };
+  isHighlighted?: boolean;
 }
 
-const ChatMessage = ({ message, userAvatar, typing }: ChatMessageProps) => {
+const ChatMessage = ({ message, userAvatar, typing, isHighlighted }: ChatMessageProps) => {
   const isAI = message.isAI;
   const content = typing?.isActive ? typing.partialContent || "" : message.content;
   
@@ -32,10 +34,12 @@ const ChatMessage = ({ message, userAvatar, typing }: ChatMessageProps) => {
   
   return (
     <div 
+      id={`message-container-${message.id}`}
       className={cn(
         "flex items-start gap-3 group",
         isAI ? "mr-12" : "ml-12 flex-row-reverse",
-        typing?.isActive ? "animate-pulse" : "animate-fade-in"
+        typing?.isActive ? "animate-pulse" : "animate-fade-in",
+        isHighlighted && "bg-primary/5 py-2 -mx-4 px-4 rounded-lg"
       )}
     >
       <Avatar className={cn("transition-all duration-300", isAI ? "border-sightx-purple/20" : "border-sightx-green/20")}>
@@ -62,7 +66,7 @@ const ChatMessage = ({ message, userAvatar, typing }: ChatMessageProps) => {
         )}
       >
         {/* Message content */}
-        <p className="whitespace-pre-wrap">{content}</p>
+        <p id={`message-${message.id}`} className="whitespace-pre-wrap">{content}</p>
         
         {/* File attachment */}
         {message.attachment && (
@@ -102,6 +106,17 @@ const ChatMessage = ({ message, userAvatar, typing }: ChatMessageProps) => {
                   </TooltipProvider>
                 </div>
               </div>
+            ) : message.attachment.type.startsWith("audio/") ? (
+              <div className="w-full">
+                <audio 
+                  controls 
+                  src={message.attachment.url} 
+                  className="w-full h-12 rounded my-1"
+                >
+                  Seu navegador não suporta áudio.
+                </audio>
+                <div className="text-xs opacity-80">{message.attachment.name}</div>
+              </div>
             ) : (
               <>
                 <div className="h-10 w-10 rounded-full flex items-center justify-center bg-white/20">
@@ -139,6 +154,9 @@ const ChatMessage = ({ message, userAvatar, typing }: ChatMessageProps) => {
           {format(message.timestamp, "HH:mm")}
         </time>
       </div>
+      
+      {/* Message reactions */}
+      <MessageReactions messageId={message.id} isAI={isAI} />
     </div>
   );
 };
