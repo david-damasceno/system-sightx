@@ -1,5 +1,8 @@
+
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const NotFound = () => {
   const location = useLocation();
@@ -12,13 +15,20 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
-          Return to Home
-        </a>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+      <div className="text-center max-w-md">
+        <div className="mb-6">
+          <img 
+            src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
+            alt="SightX Logo" 
+            className="h-16 w-16 mx-auto"
+          />
+        </div>
+        <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-sightx-purple to-sightx-green bg-clip-text text-transparent">404</h1>
+        <p className="text-xl mb-6">Oops! Página não encontrada</p>
+        <Button asChild className="bg-sightx-purple hover:bg-sightx-purple-light">
+          <Link to="/">Voltar ao início</Link>
+        </Button>
       </div>
     </div>
   );
