@@ -6,6 +6,7 @@ import { useMode } from "../contexts/ModeContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ModeToggle, ModeIndicator } from "./ModeToggle";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   MessageSquare, History, User, LogOut, Menu, X, Plus, 
   ChevronRight, ChevronLeft, Settings, BellRing, HelpCircle, 
@@ -36,25 +37,19 @@ const NavItem = ({
   
   if (isCompact) {
     return (
-      <HoverCard>
-        <HoverCardTrigger asChild>
-          <Link
-            to={to}
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-xl mx-auto mb-1 transition-all duration-300",
-              isActive
-                ? "bg-sightx-purple text-white shadow-md shadow-sightx-purple/20"
-                : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple",
-            )}
-            onClick={onClick}
-          >
-            <Icon className="h-5 w-5" />
-          </Link>
-        </HoverCardTrigger>
-        <HoverCardContent side="right" className="py-2 px-3 text-sm">
-          {children}
-        </HoverCardContent>
-      </HoverCard>
+      <Link
+        to={to}
+        className={cn(
+          "flex h-10 w-10 items-center justify-center rounded-xl mx-auto mb-1 transition-all duration-300",
+          isActive
+            ? "bg-sightx-purple text-white shadow-md shadow-sightx-purple/20"
+            : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple",
+        )}
+        onClick={onClick}
+        title={String(children)}
+      >
+        <Icon className="h-5 w-5" />
+      </Link>
     );
   }
 
@@ -81,25 +76,11 @@ const NavItem = ({
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
   const { user, logout } = useAuth();
   const { mode } = useMode();
   const location = useLocation();
   const sidebarRef = useRef<HTMLElement>(null);
   const { toast } = useToast();
-
-  // Expand sidebar on hover when in compact mode
-  const handleMouseEnter = () => {
-    if (isCompact) {
-      setIsHovering(true);
-    }
-  };
-  
-  const handleMouseLeave = () => {
-    if (isCompact) {
-      setIsHovering(false);
-    }
-  };
 
   // Close mobile sidebar when route changes
   useEffect(() => {
@@ -126,6 +107,11 @@ const Sidebar = () => {
     }
   };
 
+  // Toggle sidebar compact mode
+  const toggleCompactMode = () => {
+    setIsCompact(!isCompact);
+  };
+
   return (
     <>
       {/* Mobile menu button */}
@@ -142,19 +128,17 @@ const Sidebar = () => {
       <aside
         ref={sidebarRef}
         className={cn(
-          "bg-background/95 dark:bg-sightx-dark/95 fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out shadow-lg border-r border-border/50 md:relative backdrop-blur-lg",
+          "bg-background/95 dark:bg-sightx-dark/95 fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out shadow-lg border-r border-border/50 md:relative backdrop-blur-lg flex flex-col",
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          isCompact && !isHovering ? "md:w-[70px]" : "md:w-64"
+          isCompact ? "md:w-[70px]" : "md:w-64"
         )}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
-        <div className="flex flex-col h-full p-3 py-0">
-          {/* Logo */}
+        <div className="flex-none p-3">
+          {/* Logo and toggle button */}
           <div
             className={cn(
               "flex items-center py-4 transition-all duration-300",
-              isCompact && !isHovering ? "justify-center px-0" : "px-3"
+              isCompact ? "justify-center px-0" : "px-3"
             )}
           >
             <div
@@ -172,7 +156,7 @@ const Sidebar = () => {
             <h1
               className={cn(
                 "text-xl font-bold ml-2 transition-all duration-300 text-sightx-purple",
-                isCompact && !isHovering ? "opacity-0 w-0" : "opacity-100"
+                isCompact ? "opacity-0 w-0" : "opacity-100"
               )}
             >
               SightX
@@ -182,11 +166,8 @@ const Sidebar = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsCompact(!isCompact)}
-              className={cn(
-                "h-6 w-6 ml-auto transition-opacity duration-300 hidden md:flex",
-                isCompact && !isHovering ? "opacity-0" : "opacity-100"
-              )}
+              onClick={toggleCompactMode}
+              className="h-6 w-6 ml-auto transition-opacity duration-300 hidden md:flex"
             >
               {isCompact ? (
                 <ChevronRight className="h-4 w-4" />
@@ -199,10 +180,10 @@ const Sidebar = () => {
           <Separator className="my-3" />
           
           {/* Mode Toggle */}
-          {(!isCompact || isHovering) && <ModeToggle />}
+          {!isCompact && <ModeToggle />}
           
           {/* New Chat button */}
-          {isCompact && !isHovering ? (
+          {isCompact ? (
             <NavItem to="/chat" icon={Plus} isCompact={true} isActive={false}>
               Nova Conversa
             </NavItem>
@@ -217,10 +198,12 @@ const Sidebar = () => {
               </Button>
             </Link>
           )}
+        </div>
           
-          {/* Navigation */}
+        {/* Navigation - with ScrollArea for independent scrolling */}
+        <ScrollArea className="flex-1 px-3">
           <nav className="space-y-1 mt-3 mb-6">
-            {isCompact && !isHovering ? (
+            {isCompact ? (
               <>
                 <NavItem to="/chat" icon={MessageSquare} isCompact={true}>
                   Chat
@@ -260,7 +243,7 @@ const Sidebar = () => {
           </nav>
           
           {/* Secondary Navigation */}
-          {(!isCompact || isHovering) && (
+          {!isCompact && (
             <>
               <div className="px-3 mb-2">
                 <p className="text-xs text-muted-foreground mb-2">Preferências</p>
@@ -292,95 +275,58 @@ const Sidebar = () => {
               </div>
             </>
           )}
+        </ScrollArea>
+        
+        <div className="flex-none p-3">
+          <Separator className="my-3" />
           
-          <div className="mt-auto">
-            <Separator className="my-3" />
-            
-            {/* User info */}
-            {isCompact && !isHovering ? (
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-10 h-10 rounded-full p-0 mx-auto block"
-                  >
-                    <Avatar
-                      className="h-9 w-9 border-2 border-sightx-purple/20"
-                    >
-                      <AvatarImage src={user?.avatar} />
-                      <AvatarFallback
-                        className="text-white bg-sightx-purple"
-                      >
-                        {user?.name?.charAt(0) || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </HoverCardTrigger>
-                <HoverCardContent
-                  side="right"
-                  align="start"
-                  className="p-4 w-64 bg-card shadow-xl"
+          {/* User info */}
+          {isCompact ? (
+            <Button
+              variant="ghost"
+              className="w-10 h-10 rounded-full p-0 mx-auto block"
+              onClick={() => logout()}
+            >
+              <Avatar
+                className="h-9 w-9 border-2 border-sightx-purple/20"
+              >
+                <AvatarImage src={user?.avatar} />
+                <AvatarFallback
+                  className="text-white bg-sightx-purple"
                 >
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={user?.avatar} />
-                        <AvatarFallback
-                          className="text-lg text-white bg-sightx-purple"
-                        >
-                          {user?.name?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{user?.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {user?.email}
-                        </p>
-                      </div>
-                    </div>
-                    <Separator />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={logout}
-                      className="w-full mt-1"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sair
-                    </Button>
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            ) : (
-              <div className="flex items-center gap-3 px-3 py-2">
-                <Avatar
-                  className="h-10 w-10 border-2 border-sightx-purple/20"
+                  {user?.name?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          ) : (
+            <div className="flex items-center gap-3 px-3 py-2">
+              <Avatar
+                className="h-10 w-10 border-2 border-sightx-purple/20"
+              >
+                <AvatarImage src={user?.avatar} />
+                <AvatarFallback
+                  className="text-white bg-sightx-purple"
                 >
-                  <AvatarImage src={user?.avatar} />
-                  <AvatarFallback
-                    className="text-white bg-sightx-purple"
-                  >
-                    {user?.name?.charAt(0) || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {user?.email}
-                  </p>
-                </div>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={logout}
-                  className="text-muted-foreground hover:text-destructive h-8 w-8"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
+                  {user?.name?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user?.name}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user?.email}
+                </p>
               </div>
-            )}
-          </div>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={logout}
+                className="text-muted-foreground hover:text-destructive h-8 w-8"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </aside>
       

@@ -34,9 +34,9 @@ const ChatLayout = () => {
   }
 
   return (
-    <div className="min-h-screen flex bg-muted/30">
+    <div className="h-screen flex overflow-hidden bg-muted/30">
       <Sidebar />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
     </div>

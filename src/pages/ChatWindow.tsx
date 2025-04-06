@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
 const ChatWindow = () => {
   const {
     id
@@ -129,16 +130,16 @@ const ChatWindow = () => {
       toast.info("Compartilhamento não suportado neste navegador");
     }
   };
-  return <div className="flex flex-col h-screen">
-      {/* Chat header - simplificado sem os textos "Donna" */}
-      
-      
+
+  return (
+    <div className="flex flex-col h-screen">
       {/* Search overlay */}
       {showSearch && <MessageSearch messages={messages} onSearchResult={handleSearchResult} onClose={() => setShowSearch(false)} />}
       
       {/* Chat messages area */}
       <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-6" ref={scrollContainerRef} onScroll={handleScroll}>
-        {messages.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-center p-8 animate-fade-in">
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center p-8 animate-fade-in">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-lg bg-gradient-radial from-sightx-purple/20 to-sightx-purple/5">
               <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-12 w-12 drop-shadow-md" />
             </div>
@@ -152,36 +153,47 @@ const ChatWindow = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl w-full mt-4">
               {[{
-            icon: MessageCircle,
-            title: "Converse naturalmente",
-            description: "Faça perguntas como se estivesse conversando com uma pessoa."
-          }, {
-            icon: FileText,
-            title: "Anexe documentos",
-            description: "Envie documentos para análise e receberá insights detalhados."
-          }, {
-            icon: ImageIcon,
-            title: "Anexe imagens",
-            description: "Compartilhe imagens para obter descrições e análises visuais."
-          }].map((item, i) => <div key={i} className="p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-shadow hover:border-sightx-purple/30">
+                icon: MessageCircle,
+                title: "Converse naturalmente",
+                description: "Faça perguntas como se estivesse conversando com uma pessoa."
+              }, {
+                icon: FileText,
+                title: "Anexe documentos",
+                description: "Envie documentos para análise e receberá insights detalhados."
+              }, {
+                icon: ImageIcon,
+                title: "Anexe imagens",
+                description: "Compartilhe imagens para obter descrições e análises visuais."
+              }].map((item, i) => (
+                <div key={i} className="p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-shadow hover:border-sightx-purple/30">
                   <div className="mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-sightx-purple/10">
                     <item.icon className="h-5 w-5 text-sightx-purple" />
                   </div>
                   <h3 className="font-medium text-base mb-1">{item.title}</h3>
                   <p className="text-xs text-muted-foreground">{item.description}</p>
-                </div>)}
+                </div>
+              ))}
             </div>
-          </div> : messages.map((message, index) => {
-        // Check if this is the last AI message and is currently being typed
-        const isTyping = message.isAI && index === messages.length - 1 && aiTyping.isTyping;
-        return <ChatMessage key={message.id} message={message} userAvatar={user?.avatar} typing={isTyping ? {
-          isActive: true,
-          partialContent: aiTyping.partialMessage
-        } : undefined} isHighlighted={message.id === highlightedMessageId} />;
-      })}
+          </div>
+        ) : (
+          messages.map((message, index) => {
+            const isTyping = message.isAI && index === messages.length - 1 && aiTyping.isTyping;
+            return <ChatMessage 
+              key={message.id} 
+              message={message} 
+              userAvatar={user?.avatar} 
+              typing={isTyping ? {
+                isActive: true,
+                partialContent: aiTyping.partialMessage
+              } : undefined} 
+              isHighlighted={message.id === highlightedMessageId} 
+            />;
+          })
+        )}
         
         {/* AI is typing indicator */}
-        {isProcessing && !aiTyping.isTyping && <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
+        {isProcessing && !aiTyping.isTyping && (
+          <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sightx-purple">
               <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-5 w-5" />
             </div>
@@ -190,7 +202,8 @@ const ChatWindow = () => {
               <div className="w-2 h-2 rounded-full animate-pulse delay-150 bg-sightx-purple"></div>
               <div className="w-2 h-2 rounded-full animate-pulse delay-300 bg-sightx-purple"></div>
             </div>
-          </div>}
+          </div>
+        )}
         
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
@@ -205,6 +218,8 @@ const ChatWindow = () => {
       
       {/* Chat input */}
       <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} onOpenSearch={() => setShowSearch(true)} messages={messages} />
-    </div>;
+    </div>
+  );
 };
+
 export default ChatWindow;
