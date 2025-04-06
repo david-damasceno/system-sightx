@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, FormEvent } from "react";
 import { SendHorizonal, Paperclip, X, Smile, Mic, Camera, Search, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
