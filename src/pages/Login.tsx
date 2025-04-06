@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -14,7 +13,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [animateElements, setAnimateElements] = useState(false);
   const { login, isLoading } = useAuth();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +21,6 @@ const Login = () => {
   };
   
   useEffect(() => {
-    // Start animations after a short delay
     const timer = setTimeout(() => {
       setAnimateElements(true);
     }, 100);
@@ -159,7 +157,6 @@ const Login = () => {
         <span className="font-semibold">demo@sightx.ai / password</span>
       </p>
       
-      {/* Animated shapes */}
       {!isMobile && (
         <>
           <div className="fixed top-1/4 -left-20 w-64 h-64 bg-sightx-purple/10 rounded-full filter blur-3xl animate-pulse-subtle" />
