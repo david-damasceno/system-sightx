@@ -88,16 +88,23 @@ const useChat = (existingChatId?: string) => {
     }
   }, [chatSession, existingChatId]);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, file?: File) => {
     if (!chatSession) return;
 
-    // Create user message
+    // Create user message with optional attachment
     const userMessage: Message = {
       id: uuidv4(),
       content,
       senderId: "user",
       timestamp: new Date(),
       isAI: false,
+      ...(file && {
+        attachment: {
+          name: file.name,
+          type: file.type,
+          url: URL.createObjectURL(file)
+        }
+      })
     };
 
     // Update messages state
@@ -109,9 +116,14 @@ const useChat = (existingChatId?: string) => {
     // Simulate AI response (1-2 second delay)
     setTimeout(() => {
       // Create AI response
+      const aiResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+      
+      // If there was a file attachment, add a comment about it
+      const fileComment = file ? `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.` : '';
+      
       const aiMessage: Message = {
         id: uuidv4(),
-        content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
+        content: aiResponse + fileComment,
         senderId: "ai",
         timestamp: new Date(),
         isAI: true,
