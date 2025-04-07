@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect, FormEvent } from "react";
-import { SendHorizonal, Paperclip, X, Mic, Camera, Search, Lightbulb, Sparkles, RotateCcw } from "lucide-react";
+import { SendHorizonal, Paperclip, X, Mic, Camera, Search, Lightbulb, Sparkles, RotateCcw, User, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -23,7 +23,7 @@ const ChatInput = ({
   onOpenSearch,
   messages
 }: ChatInputProps) => {
-  const { mode } = useMode();
+  const { mode, toggleMode } = useMode();
   const [message, setMessage] = useState("");
   const [originalMessage, setOriginalMessage] = useState("");
   const [improvedMessage, setImprovedMessage] = useState("");
@@ -169,9 +169,9 @@ const ChatInput = ({
       )}
 
       {/* Input area */}
-      <form onSubmit={handleSubmit} className="p-4 px-[100px]">
+      <form onSubmit={handleSubmit} className="p-4 px-[100px] flex items-center justify-between">
         <div className={cn(
-          "relative flex items-end rounded-xl overflow-hidden border transition-all", 
+          "relative flex items-end rounded-xl overflow-hidden border transition-all flex-1", 
           focused ? "ring-2 ring-sightx-purple" : "", 
           isProcessing ? "opacity-50" : ""
         )}>
@@ -327,8 +327,38 @@ const ChatInput = ({
           />
         </div>
         
+        {/* Mode Toggle Button */}
+        <div className="ml-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={toggleMode}
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    "rounded-full h-10 w-10 p-0 border transition-all flex items-center justify-center",
+                    mode === "business" 
+                      ? "bg-sightx-purple/10 text-sightx-purple border-sightx-purple/30" 
+                      : "bg-sightx-green/10 text-sightx-green border-sightx-green/30"
+                  )}
+                >
+                  {mode === "business" ? (
+                    <Briefcase className="h-5 w-5" />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Alternar para modo {mode === "business" ? "Pessoal" : "Empresarial"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        
         {/* Helper text */}
-        <div className="mt-2 flex justify-between items-center text-xs text-muted-foreground">
+        <div className="mt-2 absolute bottom-1 left-[100px] flex justify-between items-center text-xs text-muted-foreground">
           <div>
             <span className="opacity-70">Shift + Enter para nova linha</span>
           </div>
