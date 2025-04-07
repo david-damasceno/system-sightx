@@ -132,19 +132,22 @@ const Sidebar = () => {
           <div
             className={cn(
               "flex items-center py-4 transition-all duration-300",
-              isCompact ? "justify-center px-0" : "px-3"
+              isCompact ? "justify-center px-0" : "justify-center px-3"
             )}
           >
             <img
               src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png"
               alt="SightX Logo"
-              className="h-10 w-10 object-contain rounded-xl"
+              className={cn(
+                "object-contain rounded-xl transition-all duration-300",
+                isCompact ? "h-12 w-12" : "h-14 w-14"
+              )}
             />
             
             <h1
               className={cn(
-                "text-xl font-bold ml-2 transition-all duration-300 text-sightx-purple",
-                isCompact ? "opacity-0 w-0" : "opacity-100"
+                "font-bold ml-2 transition-all duration-300 text-sightx-purple",
+                isCompact ? "opacity-0 w-0" : "opacity-100 text-2xl"
               )}
             >
               SightX
