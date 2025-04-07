@@ -32,8 +32,8 @@ interface Analysis {
   title: string;
   description: string;
   content: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;  // Modificado para aceitar string também
+  updatedAt: Date | string;  // Modificado para aceitar string também
   tags: string[];
   status: "complete" | "pending" | "archived";
   favorite: boolean;
@@ -238,12 +238,25 @@ const AnalysisCard = ({
   const { mode } = useMode();
   
   // Formatar data
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
-    }).format(date);
+  const formatDate = (date: Date | string) => {
+    // Verifica se a data é válida antes de formatar
+    try {
+      const dateObject = date instanceof Date ? date : new Date(date);
+      
+      // Verifica se a data é válida
+      if (isNaN(dateObject.getTime())) {
+        return "Data inválida";
+      }
+      
+      return new Intl.DateTimeFormat('pt-BR', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      }).format(dateObject);
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return "Data inválida";
+    }
   };
   
   // Badge de status
@@ -443,14 +456,27 @@ const AnalysisDetailDialog = ({
   };
   
   // Formatar data completa
-  const formatFullDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+  const formatFullDate = (date: Date | string) => {
+    // Verifica se a data é válida antes de formatar
+    try {
+      const dateObject = date instanceof Date ? date : new Date(date);
+      
+      // Verifica se a data é válida
+      if (isNaN(dateObject.getTime())) {
+        return "Data inválida";
+      }
+      
+      return new Intl.DateTimeFormat('pt-BR', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(dateObject);
+    } catch (error) {
+      console.error("Erro ao formatar data completa:", error);
+      return "Data inválida";
+    }
   };
   
   if (!analysis) return null;
@@ -838,12 +864,13 @@ const Analysis = () => {
     const saved = localStorage.getItem(`sightx-analyses-${mode}`);
     
     if (saved) {
-      const parsed = JSON.parse(saved);
-      setAnalyses(parsed.map((a: any) => ({
-        ...a,
-        createdAt: new Date(a.createdAt),
-        updatedAt: new Date(a.updatedAt)
-      })));
+      try {
+        const parsed = JSON.parse(saved);
+        setAnalyses(parsed);
+      } catch (error) {
+        console.error("Erro ao analisar dados do localStorage:", error);
+        setAnalyses(generateMockAnalyses());
+      }
     } else {
       setAnalyses(generateMockAnalyses());
     }
@@ -851,7 +878,11 @@ const Analysis = () => {
   
   // Atualizar localStorage quando análises mudar
   useEffect(() => {
-    localStorage.setItem(`sightx-analyses-${mode}`, JSON.stringify(analyses));
+    try {
+      localStorage.setItem(`sightx-analyses-${mode}`, JSON.stringify(analyses));
+    } catch (error) {
+      console.error("Erro ao salvar no localStorage:", error);
+    }
   }, [analyses, mode]);
   
   // Filtrar análises baseado na busca e filtro ativo
@@ -876,7 +907,11 @@ const Analysis = () => {
         filtered = filtered.filter(a => a.favorite);
         break;
       case 'recent':
-        filtered = filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+        filtered = filtered.sort((a, b) => {
+          const dateA = a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt);
+          const dateB = b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt);
+          return dateB.getTime() - dateA.getTime();
+        });
         break;
       case 'complete':
         filtered = filtered.filter(a => a.status === 'complete');
@@ -1050,7 +1085,9 @@ const Analysis = () => {
               {analyses.filter(a => a.status === "complete").length}
             </div>
             <p className="text-sm text-muted-foreground">
-              {Math.round((analyses.filter(a => a.status === "complete").length / analyses.length) * 100)}% do total
+              {analyses.length > 0 
+                ? Math.round((analyses.filter(a => a.status === "complete").length / analyses.length) * 100)
+                : 0}% do total
             </p>
           </CardContent>
         </Card>
@@ -1067,7 +1104,14 @@ const Analysis = () => {
               {analyses.filter(a => {
                 const oneWeekAgo = new Date();
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                return new Date(a.createdAt) > oneWeekAgo;
+                try {
+                  const createdAt = a.createdAt instanceof Date 
+                    ? a.createdAt 
+                    : new Date(a.createdAt);
+                  return createdAt > oneWeekAgo;
+                } catch (error) {
+                  return false;
+                }
               }).length}
             </div>
             <p className="text-sm text-muted-foreground">
