@@ -294,12 +294,15 @@ const Sidebar = () => {
               <Avatar
                 className="h-9 w-9 border-2 border-sightx-purple/20"
               >
-                <AvatarImage src={user?.avatar} />
-                <AvatarFallback
-                  className="text-white bg-sightx-purple"
-                >
-                  {getUserInitials()}
-                </AvatarFallback>
+                {user?.avatar ? (
+                  <AvatarImage src={user.avatar} alt={user?.name || "User"} />
+                ) : (
+                  <AvatarFallback
+                    className="text-white bg-sightx-purple"
+                  >
+                    {getUserInitials()}
+                  </AvatarFallback>
+                )}
               </Avatar>
             </Button>
           ) : (
@@ -307,12 +310,15 @@ const Sidebar = () => {
               <Avatar
                 className="h-10 w-10 border-2 border-sightx-purple/20"
               >
-                <AvatarImage src={user?.avatar} />
-                <AvatarFallback
-                  className="text-white bg-sightx-purple"
-                >
-                  {getUserInitials()}
-                </AvatarFallback>
+                {user?.avatar ? (
+                  <AvatarImage src={user.avatar} alt={user?.name || "User"} />
+                ) : (
+                  <AvatarFallback
+                    className="text-white bg-sightx-purple"
+                  >
+                    {getUserInitials()}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user?.name}</p>
