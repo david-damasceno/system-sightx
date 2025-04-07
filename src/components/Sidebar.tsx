@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   MessageSquare, History, User, LogOut, Menu, X, Plus, 
   ChevronRight, ChevronLeft, Settings, BellRing, HelpCircle, 
-  Moon, Sun, Briefcase, BarChart, Bookmark
+  Moon, Sun, Briefcase, BarChart, Bookmark, PanelLeftOpen, PanelLeftClose
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -137,9 +138,7 @@ const Sidebar = () => {
             <img
               src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png"
               alt="SightX Logo"
-              className={cn(
-                "h-10 w-10 object-contain p-2 rounded-xl shadow-lg bg-sightx-purple"
-              )}
+              className="h-10 w-10 object-contain rounded-xl"
             />
             
             <h1
@@ -150,19 +149,6 @@ const Sidebar = () => {
             >
               SightX
             </h1>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleCompactMode}
-              className="h-6 w-6 ml-auto transition-opacity duration-300 hidden md:flex"
-            >
-              {isCompact ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </Button>
           </div>
           
           <Separator className="my-3" />
@@ -263,6 +249,27 @@ const Sidebar = () => {
         
         <div className="flex-none p-3">
           <Separator className="my-3" />
+          
+          <div className="flex items-center justify-between mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleCompactMode}
+              className="w-full flex items-center justify-center gap-2 text-xs"
+            >
+              {isCompact ? (
+                <>
+                  <PanelLeftOpen className="h-4 w-4" />
+                  <span className="sr-only">Expandir</span>
+                </>
+              ) : (
+                <>
+                  <PanelLeftClose className="h-4 w-4" />
+                  <span>Recolher menu</span>
+                </>
+              )}
+            </Button>
+          </div>
           
           {isCompact ? (
             <Button
