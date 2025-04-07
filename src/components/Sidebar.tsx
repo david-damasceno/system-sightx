@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -107,6 +106,18 @@ const Sidebar = () => {
 
   const toggleCompactMode = () => {
     setIsCompact(!isCompact);
+  };
+
+  const getUserInitials = () => {
+    if (!user || !user.name) return "U";
+    
+    const nameParts = user.name.trim().split(" ");
+    
+    if (nameParts.length >= 2) {
+      return `${nameParts[0].charAt(0)}${nameParts[nameParts.length - 1].charAt(0)}`.toUpperCase();
+    } else {
+      return nameParts[0].charAt(0).toUpperCase();
+    }
   };
 
   return (
@@ -287,7 +298,7 @@ const Sidebar = () => {
                 <AvatarFallback
                   className="text-white bg-sightx-purple"
                 >
-                  {user?.name?.charAt(0) || "U"}
+                  {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -300,7 +311,7 @@ const Sidebar = () => {
                 <AvatarFallback
                   className="text-white bg-sightx-purple"
                 >
-                  {user?.name?.charAt(0) || "U"}
+                  {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
