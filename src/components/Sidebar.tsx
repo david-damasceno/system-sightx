@@ -104,7 +104,7 @@ const Sidebar = () => {
             </h1>
           </div>
           
-          <Separator className="my-3" />
+          <Separator className="my-0" />
           
           {!isCompact && <ModeToggle />}
           
