@@ -140,40 +140,108 @@ const ChatWindow = () => {
       {/* Chat messages area */}
       <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-6" ref={scrollContainerRef} onScroll={handleScroll}>
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-8 animate-fade-in">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-lg bg-gradient-radial from-sightx-purple/20 to-sightx-purple/5">
-              <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-12 w-12 drop-shadow-md" />
-            </div>
-            <h2 className="text-2xl font-semibold mb-3 text-sightx-purple">
-              Bem-vindo ao SightX
-              {mode === "business" ? " (Modo Empresarial)" : " (Modo Pessoal)"}
-            </h2>
-            <p className="text-muted-foreground max-w-md mb-6">
-              {mode === "business" ? "Converse no contexto empresarial para obter respostas focadas em negócios e análises profissionais." : "Comece a conversar com o SightX para obter respostas inteligentes e análises detalhadas para suas perguntas."}
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl w-full mt-4">
-              {[{
-                icon: MessageCircle,
-                title: "Converse naturalmente",
-                description: "Faça perguntas como se estivesse conversando com uma pessoa."
-              }, {
-                icon: FileText,
-                title: "Anexe documentos",
-                description: "Envie documentos para análise e receberá insights detalhados."
-              }, {
-                icon: ImageIcon,
-                title: "Anexe imagens",
-                description: "Compartilhe imagens para obter descrições e análises visuais."
-              }].map((item, i) => (
-                <div key={i} className="p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-shadow hover:border-sightx-purple/30">
-                  <div className="mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-sightx-purple/10">
-                    <item.icon className="h-5 w-5 text-sightx-purple" />
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 animate-fade-in">
+            <div className="w-full max-w-3xl mx-auto">
+              {/* Logo e título */}
+              <div className="relative mb-8">
+                <div className="absolute inset-0 -z-10 bg-gradient-radial from-sightx-purple/20 via-sightx-purple/5 to-transparent blur-3xl opacity-70"></div>
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg mx-auto bg-gradient-to-br from-sightx-purple/30 to-sightx-purple/5 border border-sightx-purple/30">
+                  <div className="w-16 h-16 rounded-xl flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                    <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-10 w-10 drop-shadow-md animate-pulse-subtle" />
                   </div>
-                  <h3 className="font-medium text-base mb-1">{item.title}</h3>
-                  <p className="text-xs text-muted-foreground">{item.description}</p>
                 </div>
-              ))}
+                
+                <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-sightx-purple to-sightx-purple-light bg-clip-text text-transparent">
+                  Bem-vindo ao SightX
+                </h2>
+                
+                <div className="inline-flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-full mb-4">
+                  {mode === "business" ? (
+                    <><Briefcase className="h-4 w-4 text-sightx-green" /> 
+                    <span className="text-sm font-medium text-sightx-green">Modo Empresarial</span></>
+                  ) : (
+                    <><User className="h-4 w-4 text-sightx-purple" /> 
+                    <span className="text-sm font-medium text-sightx-purple">Modo Pessoal</span></>
+                  )}
+                </div>
+                
+                <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
+                  {mode === "business" 
+                    ? "Converse no contexto empresarial para obter respostas focadas em negócios, análises profissionais e insights estratégicos." 
+                    : "Comece uma conversa inteligente e obtenha respostas detalhadas, análises personalizadas e assistência para qualquer assunto."}
+                </p>
+              </div>
+              
+              {/* Seção de recursos */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                {[
+                  {
+                    icon: MessageCircle,
+                    title: "Conversas Naturais",
+                    description: "Dialogue como se estivesse falando com uma pessoa. Faça perguntas complexas e receba respostas detalhadas.",
+                    color: "from-sightx-purple/20 to-sightx-purple/5",
+                    iconColor: "text-sightx-purple"
+                  }, 
+                  {
+                    icon: FileText,
+                    title: "Análise de Documentos",
+                    description: "Envie documentos para extrair informações, resumir conteúdos e obter insights valiosos.",
+                    color: mode === "business" ? "from-sightx-green/20 to-sightx-green/5" : "from-sightx-purple/20 to-sightx-purple/5",
+                    iconColor: mode === "business" ? "text-sightx-green" : "text-sightx-purple"
+                  }, 
+                  {
+                    icon: ImageIcon,
+                    title: "Processamento de Imagens",
+                    description: "Compartilhe imagens para identificação, descrição detalhada e análise visual avançada.",
+                    color: "from-sightx-purple/20 to-sightx-purple/5",
+                    iconColor: "text-sightx-purple"
+                  }
+                ].map((item, i) => (
+                  <div key={i} className="group relative overflow-hidden">
+                    <div className={`p-5 rounded-xl border bg-card transition-all duration-300 hover:shadow-md hover:shadow-${mode === "business" ? "sightx-green" : "sightx-purple"}/10 hover:border-${mode === "business" ? "sightx-green" : "sightx-purple"}/30`}>
+                      <div className={`absolute inset-0 -z-10 bg-gradient-to-br ${item.color} opacity-30 group-hover:opacity-50 transition-opacity`}></div>
+                      <div className={`mx-auto w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-${mode === "business" ? "sightx-green" : "sightx-purple"}/10`}>
+                        <item.icon className={`h-6 w-6 ${item.iconColor}`} />
+                      </div>
+                      <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Dicas de uso */}
+              <div className="bg-muted/40 border rounded-xl p-5 mb-6">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-sightx-purple/20 flex items-center justify-center text-xs text-sightx-purple font-bold">?</span>
+                  Como começar
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    "Digite uma pergunta completa para obter melhores respostas",
+                    "Anexe arquivos para análise específica",
+                    "Use o modo empresarial para consultas profissionais",
+                    "Explore temas através de conversas continuadas"
+                  ].map((tip, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${mode === "business" ? "bg-sightx-green/20 text-sightx-green" : "bg-sightx-purple/20 text-sightx-purple"}`}>
+                        <span className="text-xs font-bold">{i + 1}</span>
+                      </div>
+                      <span className="text-sm">{tip}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Botão iniciar */}
+              <div className="flex justify-center">
+                <Button 
+                  className={`font-medium shadow-md ${mode === "business" ? "bg-sightx-green hover:bg-sightx-green/90" : "bg-sightx-purple hover:bg-sightx-purple-light"}`}
+                  onClick={() => document.querySelector('textarea')?.focus()}
+                >
+                  Comece uma conversa agora
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
@@ -209,8 +277,6 @@ const ChatWindow = () => {
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
       </div>
-      
-      {/* Botão "Scroll to bottom" removido */}
       
       {/* Chat input */}
       <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} onOpenSearch={() => setShowSearch(true)} messages={messages} />
