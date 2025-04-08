@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -209,12 +210,7 @@ const ChatWindow = () => {
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Scroll to bottom button */}
-      <div className={cn("absolute bottom-24 right-6 transition-opacity duration-300", showScrollToBottom ? "opacity-100" : "opacity-0 pointer-events-none")}>
-        <Button size="icon" className="rounded-full h-10 w-10 shadow-lg bg-sightx-purple hover:bg-sightx-purple-light" onClick={scrollToBottom}>
-          <MessageCircle className="h-5 w-5" />
-        </Button>
-      </div>
+      {/* Botão "Scroll to bottom" removido */}
       
       {/* Chat input */}
       <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} onOpenSearch={() => setShowSearch(true)} messages={messages} />
