@@ -14,7 +14,7 @@ export const ModeToggle: React.FC = () => {
       <p className="text-xs text-muted-foreground mb-1.5 px-1">Modo de contexto</p>
       <ToggleGroup type="single" value={mode} onValueChange={value => {
       if (value) setMode(value as "personal" | "business");
-    }} className="flex justify-between rounded-lg p-1 bg-muted/60 border shadow-sm">
+    }} className="flex justify-between rounded-lg p-1 bg-muted/60 border shadow-sm my-[12px] py-[4px]">
         <ToggleGroupItem value="personal" className={cn("flex-1 gap-1.5 h-8 data-[state=on]:bg-background data-[state=on]:shadow", mode === "personal" ? "text-sightx-purple font-medium" : "text-muted-foreground")}>
           <User className="h-3.5 w-3.5" />
           <span className="text-xs">Pessoal</span>
