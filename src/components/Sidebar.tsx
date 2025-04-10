@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -97,7 +98,7 @@ const Sidebar = () => {
       <aside ref={sidebarRef} className={cn("bg-background/95 dark:bg-sightx-dark/95 fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out shadow-lg border-r border-border/50 md:relative backdrop-blur-lg flex flex-col", isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0", isCompact ? "md:w-[70px]" : "md:w-64")}>
         <div className="flex-none p-3 py-0">
           <div className={cn("flex items-center py-4 transition-all duration-300", isCompact ? "justify-center px-0" : "justify-center px-3")}>
-            <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className={cn("object-contain rounded-xl transition-all duration-300", isCompact ? "h-12 w-12" : "h-14 w-14")} />
+            <img src="/lovable-uploads/aa74ed4a-9983-4dd2-b4e3-a9906a723587.png" alt="SightX Logo" className={cn("object-contain rounded-[20px] transition-all duration-300", isCompact ? "h-12 w-12" : "h-14 w-14")} />
             
             <h1 className={cn("font-bold ml-2 transition-all duration-300 text-sightx-purple", isCompact ? "opacity-0 w-0" : "opacity-100 text-2xl")}>
               SightX

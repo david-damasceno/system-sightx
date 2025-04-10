@@ -17,9 +17,9 @@ const ChatLayout = () => {
       <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="h-20 w-20 mb-8 rounded-2xl flex items-center justify-center bg-sightx-purple/10">
           <img 
-            src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
+            src="/lovable-uploads/aa74ed4a-9983-4dd2-b4e3-a9906a723587.png" 
             alt="SightX Logo" 
-            className="h-12 w-12 animate-pulse" 
+            className="h-12 w-12 animate-pulse rounded-[20px]" 
           />
         </div>
         <Loader2 className="h-8 w-8 animate-spin text-sightx-purple" />
