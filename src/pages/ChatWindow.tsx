@@ -16,23 +16,10 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ChatWindow = () => {
-  const {
-    id
-  } = useParams();
-  const {
-    user
-  } = useAuth();
-  const {
-    mode
-  } = useMode();
-  const {
-    messages,
-    sendMessage,
-    isProcessing,
-    aiTyping,
-    chatSession,
-    isLoading
-  } = useChat(id);
+  const { id } = useParams();
+  const { user } = useAuth();
+  const { mode } = useMode();
+  const { messages, sendMessage, isProcessing, aiTyping, chatSession, isLoading } = useChat(id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -50,11 +37,7 @@ const ChatWindow = () => {
   // Handle scroll events
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
-    const {
-      scrollTop,
-      scrollHeight,
-      clientHeight
-    } = scrollContainerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
     const isAtBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 10;
     setAutoScroll(isAtBottom);
     setHasScrolled(true);
@@ -152,7 +135,8 @@ const ChatWindow = () => {
       {/* Chat messages area */}
       <ScrollArea className="flex-1 p-4 pt-6 space-y-6" onScrollCapture={handleScroll} ref={scrollContainerRef}>
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
+          <div className="flex items-center justify-center h-full flex-col gap-4 text-muted-foreground">
+            <p className="text-center text-lg font-medium">Bem-vindo ao SightX Chat</p>
             <p className="text-center">Digite uma mensagem abaixo para iniciar a conversa.</p>
           </div>
         ) : (

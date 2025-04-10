@@ -221,42 +221,6 @@ const useChat = (existingChatId?: string) => {
     }
   }, [user, mode]);
 
-  // Criar nova sessão se não tivermos uma
-  useEffect(() => {
-    if (!isLoading && !chatSession && !existingChatId && user) {
-      const newSession: ChatSession = {
-        id: uuidv4(),
-        title: mode === "business" ? "Nova conversa empresarial" : "Nova conversa",
-        messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setChatSession(newSession);
-
-      // Mensagem de boas-vindas do AI
-      const welcomeMessage: Message = {
-        id: uuidv4(),
-        content: mode === "business" 
-          ? "Olá! Sou o assistente do SightX no modo empresarial. Como posso ajudar sua empresa hoje?" 
-          : "Olá! Sou o assistente do SightX. Como posso ajudar você hoje?",
-        senderId: "ai",
-        timestamp: new Date(),
-        isAI: true,
-      };
-      
-      setMessages([welcomeMessage]);
-      
-      // Atualizar a sessão com a mensagem de boas-vindas
-      newSession.messages = [welcomeMessage];
-      
-      // Adicionar ao histórico local
-      setChatHistory(prev => [newSession, ...prev]);
-      
-      // Salvar no Supabase
-      saveNewSession(newSession);
-    }
-  }, [chatSession, existingChatId, mode, isLoading, user]);
-
   // Efeito de digitação do AI
   useEffect(() => {
     let interval: number | null = null;
@@ -294,7 +258,7 @@ const useChat = (existingChatId?: string) => {
   }, [aiTyping.isTyping]);
 
   const sendMessage = async (content: string, file?: File) => {
-    if (!chatSession || !user) return;
+    if (!user) return;
 
     // Criar mensagem do usuário com anexo opcional
     const userMessage: Message = {
@@ -312,8 +276,48 @@ const useChat = (existingChatId?: string) => {
       })
     };
 
-    // Atualizar estado de mensagens
-    setMessages(prev => [...prev, userMessage]);
+    // Verificar se precisamos criar uma nova sessão
+    const needNewSession = !chatSession;
+    let currentSession = chatSession;
+    
+    if (needNewSession) {
+      // Criar nova sessão
+      currentSession = {
+        id: uuidv4(),
+        title: generateChatTitle(content),
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setChatSession(currentSession);
+      
+      // Mensagem de boas-vindas do AI
+      const welcomeMessage: Message = {
+        id: uuidv4(),
+        content: mode === "business" 
+          ? "Olá! Sou o assistente do SightX no modo empresarial. Como posso ajudar sua empresa hoje?" 
+          : "Olá! Sou o assistente do SightX. Como posso ajudar você hoje?",
+        senderId: "ai",
+        timestamp: new Date(),
+        isAI: true,
+      };
+      
+      // Atualizar a sessão com a mensagem de boas-vindas e a mensagem do usuário
+      currentSession.messages = [welcomeMessage, userMessage];
+      
+      // Atualizar mensagens
+      setMessages([welcomeMessage, userMessage]);
+      
+      // Adicionar ao histórico local
+      setChatHistory(prev => [currentSession!, ...prev]);
+      
+      // Salvar no Supabase
+      saveNewSession(currentSession);
+    } else {
+      // Atualizar mensagens na sessão existente
+      currentSession.messages = [...currentSession.messages, userMessage];
+      setMessages(prev => [...prev, userMessage]);
+    }
 
     // Iniciar "pensamento" do AI
     setIsProcessing(true);
@@ -369,25 +373,28 @@ const useChat = (existingChatId?: string) => {
           );
           
           // Atualizar a sessão de chat
-          const newMessages = [userMessage, updatedAiMessage];
-          const updatedSession = {
-            ...chatSession,
-            messages: [...chatSession.messages, ...newMessages],
-            title: chatSession.messages.length === 0 ? generateChatTitle(content) : chatSession.title,
-            updatedAt: new Date(),
-          };
-          
-          setChatSession(updatedSession);
-          
-          // Atualizar histórico de chat local
-          setChatHistory(prev => 
-            prev.map(chat => 
-              chat.id === updatedSession.id ? updatedSession : chat
-            )
-          );
-          
-          // Salvar no Supabase
-          updateSession(chatSession, newMessages);
+          if (currentSession) {
+            const newMessages = needNewSession ? [] : [userMessage, updatedAiMessage];
+            const updatedSession = {
+              ...currentSession,
+              messages: [...currentSession.messages, ...(needNewSession ? [] : [updatedAiMessage])],
+              updatedAt: new Date(),
+            };
+            
+            setChatSession(updatedSession);
+            
+            // Atualizar histórico de chat local
+            setChatHistory(prev => 
+              prev.map(chat => 
+                chat.id === updatedSession.id ? updatedSession : chat
+              )
+            );
+            
+            // Salvar no Supabase
+            if (!needNewSession) {
+              updateSession(currentSession, newMessages);
+            }
+          }
           
           setIsProcessing(false);
         }
