@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
 import { useMode } from "../contexts/ModeContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
 
 const mockResponses = [
   "Olá! Como posso ajudar você hoje?",
@@ -33,6 +36,7 @@ interface AiTypingState {
 
 const useChat = (existingChatId?: string) => {
   const { mode } = useMode();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
@@ -43,51 +47,179 @@ const useChat = (existingChatId?: string) => {
     fullMessage: "",
     progress: 0
   });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get the appropriate local storage key based on mode
-  const getStorageKey = () => `sightx-chat-history-${mode}`;
+  // Função para carregar as mensagens do Supabase
+  const loadChatSessions = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const { data: sessions, error } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+        
+      if (error) throw error;
 
-  // Load chat sessions from local storage
-  useEffect(() => {
-    const storedHistory = localStorage.getItem(getStorageKey());
-    if (storedHistory) {
-      try {
-        const parsedHistory = JSON.parse(storedHistory);
-        const validHistory = parsedHistory.map((session: any) => ({
-          ...session,
-          createdAt: new Date(session.createdAt),
-          updatedAt: new Date(session.updatedAt),
-          messages: session.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-          })),
-        }));
-        setChatHistory(validHistory);
-
-        // If we have a chat ID, load that chat
+      if (sessions) {
+        // Converter os dados para o formato esperado
+        const formattedSessions: ChatSession[] = await Promise.all(
+          sessions.map(async (session) => {
+            // Carregar mensagens para cada sessão
+            const { data: messageData, error: messagesError } = await supabase
+              .from('chat_messages')
+              .select('*')
+              .eq('session_id', session.id)
+              .order('timestamp', { ascending: true });
+              
+            if (messagesError) throw messagesError;
+            
+            // Formatar mensagens
+            const formattedMessages: Message[] = messageData?.map(msg => ({
+              id: msg.id,
+              content: msg.content,
+              senderId: msg.sender_id,
+              isAI: msg.is_ai,
+              timestamp: new Date(msg.timestamp),
+              ...(msg.attachment && {
+                attachment: {
+                  name: msg.attachment.name,
+                  type: msg.attachment.type,
+                  url: msg.attachment.url
+                }
+              })
+            })) || [];
+            
+            return {
+              id: session.id,
+              title: session.title,
+              messages: formattedMessages,
+              createdAt: new Date(session.created_at),
+              updatedAt: new Date(session.updated_at)
+            };
+          })
+        );
+        
+        setChatHistory(formattedSessions);
+        
+        // Se temos um ID específico de chat, carregamos ele
         if (existingChatId) {
-          const existingChat = validHistory.find((c: ChatSession) => c.id === existingChatId);
+          const existingChat = formattedSessions.find(c => c.id === existingChatId);
           if (existingChat) {
             setChatSession(existingChat);
             setMessages(existingChat.messages);
           }
         }
-      } catch (e) {
-        console.error("Error loading chat history:", e);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar histórico de chat:", error);
+      toast.error("Erro ao carregar o histórico de conversas");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Salvar nova sessão no Supabase
+  const saveNewSession = async (session: ChatSession) => {
+    if (!user) return;
+    
+    try {
+      // Salvar sessão
+      const { error: sessionError } = await supabase
+        .from('chat_sessions')
+        .insert({
+          id: session.id,
+          title: session.title,
+          user_id: user.id,
+          created_at: session.createdAt.toISOString(),
+          updated_at: session.updatedAt.toISOString()
+        });
+        
+      if (sessionError) throw sessionError;
+      
+      // Salvar mensagens
+      if (session.messages.length > 0) {
+        const messagesToInsert = session.messages.map(msg => ({
+          id: msg.id,
+          session_id: session.id,
+          content: msg.content,
+          sender_id: msg.senderId,
+          is_ai: msg.isAI,
+          timestamp: msg.timestamp.toISOString(),
+          attachment: msg.attachment
+        }));
+        
+        const { error: messagesError } = await supabase
+          .from('chat_messages')
+          .insert(messagesToInsert);
+          
+        if (messagesError) throw messagesError;
+      }
+    } catch (error) {
+      console.error("Erro ao salvar sessão:", error);
+      toast.error("Erro ao salvar conversa");
+    }
+  };
+
+  // Atualizar sessão existente
+  const updateSession = async (session: ChatSession, newMessages: Message[]) => {
+    if (!user) return;
+    
+    try {
+      // Atualizar sessão
+      const { error: sessionError } = await supabase
+        .from('chat_sessions')
+        .update({
+          title: session.title,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.id);
+        
+      if (sessionError) throw sessionError;
+      
+      // Inserir novas mensagens
+      if (newMessages.length > 0) {
+        const messagesToInsert = newMessages.map(msg => ({
+          id: msg.id,
+          session_id: session.id,
+          content: msg.content,
+          sender_id: msg.senderId,
+          is_ai: msg.isAI,
+          timestamp: msg.timestamp.toISOString(),
+          attachment: msg.attachment
+        }));
+        
+        const { error: messagesError } = await supabase
+          .from('chat_messages')
+          .insert(messagesToInsert);
+          
+        if (messagesError) throw messagesError;
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar sessão:", error);
+      toast.error("Erro ao atualizar conversa");
+    }
+  };
+
+  // Carregar histórico de chat quando o usuário ou modo mudar
+  useEffect(() => {
+    if (user) {
+      loadChatSessions();
+    } else {
+      setChatHistory([]);
+      if (!existingChatId) {
+        setChatSession(null);
+        setMessages([]);
       }
     }
-  }, [existingChatId, mode, getStorageKey]);
+  }, [user, mode]);
 
-  // Save chat history to local storage whenever it changes
+  // Criar nova sessão se não tivermos uma
   useEffect(() => {
-    if (chatHistory.length > 0) {
-      localStorage.setItem(getStorageKey(), JSON.stringify(chatHistory));
-    }
-  }, [chatHistory, getStorageKey]);
-
-  // Create a new chat session if we don't have one
-  useEffect(() => {
-    if (!chatSession && !existingChatId) {
+    if (!isLoading && !chatSession && !existingChatId && user) {
       const newSession: ChatSession = {
         id: uuidv4(),
         title: mode === "business" ? "Nova conversa empresarial" : "Nova conversa",
@@ -97,7 +229,7 @@ const useChat = (existingChatId?: string) => {
       };
       setChatSession(newSession);
 
-      // Add AI welcome message
+      // Mensagem de boas-vindas do AI
       const welcomeMessage: Message = {
         id: uuidv4(),
         content: mode === "business" 
@@ -110,23 +242,18 @@ const useChat = (existingChatId?: string) => {
       
       setMessages([welcomeMessage]);
       
-      // Update the session with the welcome message
+      // Atualizar a sessão com a mensagem de boas-vindas
       newSession.messages = [welcomeMessage];
       
-      // Add to chat history
-      setChatHistory(prev => [...prev, newSession]);
+      // Adicionar ao histórico local
+      setChatHistory(prev => [newSession, ...prev]);
+      
+      // Salvar no Supabase
+      saveNewSession(newSession);
     }
-  }, [chatSession, existingChatId, mode]);
+  }, [chatSession, existingChatId, mode, isLoading, user]);
 
-  // Reset the chat session when mode changes
-  useEffect(() => {
-    if (!existingChatId) {
-      setChatSession(null);
-      setMessages([]);
-    }
-  }, [mode, existingChatId]);
-
-  // Simulate AI typing effect
+  // Efeito de digitação do AI
   useEffect(() => {
     let interval: number | null = null;
     
@@ -137,7 +264,7 @@ const useChat = (existingChatId?: string) => {
           const nextPartial = prev.fullMessage.substring(0, nextLen);
           const progress = nextLen / prev.fullMessage.length;
           
-          // If complete, stop the interval
+          // Se completou, para o intervalo
           if (nextLen === prev.fullMessage.length) {
             if (interval) clearInterval(interval);
             return {
@@ -154,7 +281,7 @@ const useChat = (existingChatId?: string) => {
             progress
           };
         });
-      }, 25); // Adjust speed as needed
+      }, 25);
     }
     
     return () => {
@@ -163,9 +290,9 @@ const useChat = (existingChatId?: string) => {
   }, [aiTyping.isTyping]);
 
   const sendMessage = async (content: string, file?: File) => {
-    if (!chatSession) return;
+    if (!chatSession || !user) return;
 
-    // Create user message with optional attachment
+    // Criar mensagem do usuário com anexo opcional
     const userMessage: Message = {
       id: uuidv4(),
       content,
@@ -181,19 +308,19 @@ const useChat = (existingChatId?: string) => {
       })
     };
 
-    // Update messages state
+    // Atualizar estado de mensagens
     setMessages(prev => [...prev, userMessage]);
 
-    // Start AI "thinking"
+    // Iniciar "pensamento" do AI
     setIsProcessing(true);
 
-    // Simulate AI response (1-2 second delay)
+    // Simular resposta do AI (1-2 segundos de atraso)
     setTimeout(() => {
-      // Choose response based on mode
+      // Escolher resposta baseada no modo
       const responses = mode === "business" ? businessResponses : mockResponses;
       const aiResponse = responses[Math.floor(Math.random() * responses.length)];
       
-      // If there was a file attachment, add a mode-specific comment about it
+      // Se houver anexo, adicionar um comentário específico do modo
       const fileComment = file 
         ? mode === "business"
           ? `\n\nNotei que você anexou um documento empresarial "${file.name}". Vou analisar seu conteúdo do ponto de vista comercial.`
@@ -202,7 +329,7 @@ const useChat = (existingChatId?: string) => {
       
       const fullContent = aiResponse + fileComment;
 
-      // Start typing effect
+      // Iniciar efeito de digitação
       setAiTyping({
         isTyping: true,
         partialMessage: "",
@@ -210,7 +337,7 @@ const useChat = (existingChatId?: string) => {
         progress: 0
       });
       
-      // Create AI message but don't add to messages yet - we'll update it during typing
+      // Criar mensagem do AI mas não adicionar às mensagens ainda - iremos atualizá-la durante a digitação
       const aiMessage: Message = {
         id: uuidv4(),
         content: "",
@@ -219,38 +346,44 @@ const useChat = (existingChatId?: string) => {
         isAI: true,
       };
 
-      // Add the message with empty content, we'll update it via the typing effect
+      // Adicionar a mensagem com conteúdo vazio, iremos atualizá-la via efeito de digitação
       setMessages(prev => [...prev, aiMessage]);
 
-      // Set up interval to check typing status and finalize when done
+      // Configurar intervalo para verificar status de digitação e finalizar quando terminar
       const checkTypingInterval = setInterval(() => {
         if (!aiTyping.isTyping) {
           clearInterval(checkTypingInterval);
           
-          // Finalize the message with the full content
+          // Finalizar a mensagem com o conteúdo completo
+          const updatedAiMessage = {...aiMessage, content: fullContent};
+          
           setMessages(prev => 
             prev.map(msg => msg.id === aiMessage.id 
-              ? {...msg, content: fullContent} 
+              ? updatedAiMessage 
               : msg
             )
           );
           
-          // Update chat session
+          // Atualizar a sessão de chat
+          const newMessages = [userMessage, updatedAiMessage];
           const updatedSession = {
             ...chatSession,
-            messages: [...chatSession.messages, userMessage, {...aiMessage, content: fullContent}],
+            messages: [...chatSession.messages, ...newMessages],
             title: chatSession.messages.length === 0 ? generateChatTitle(content) : chatSession.title,
             updatedAt: new Date(),
           };
           
           setChatSession(updatedSession);
           
-          // Update chat history
+          // Atualizar histórico de chat local
           setChatHistory(prev => 
             prev.map(chat => 
               chat.id === updatedSession.id ? updatedSession : chat
             )
           );
+          
+          // Salvar no Supabase
+          updateSession(chatSession, newMessages);
           
           setIsProcessing(false);
         }
@@ -259,28 +392,81 @@ const useChat = (existingChatId?: string) => {
   };
 
   const generateChatTitle = (firstMessage: string) => {
-    // Generate a title from the first few words
+    // Gerar um título a partir das primeiras palavras
     const words = firstMessage.split(" ");
     const shortTitle = words.slice(0, 3).join(" ");
     return shortTitle.length < 20 ? shortTitle : shortTitle.substring(0, 20) + "...";
   };
 
-  const deleteChat = (chatId: string) => {
-    // Remove the chat from history
-    setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
+  const deleteChat = async (chatId: string) => {
+    if (!user) return;
     
-    // Clear current session if that was the one deleted
-    if (chatSession?.id === chatId) {
-      setChatSession(null);
-      setMessages([]);
+    try {
+      // Excluir mensagens primeiro (devido à restrição de chave estrangeira)
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('session_id', chatId);
+        
+      if (messagesError) throw messagesError;
+      
+      // Excluir a sessão
+      const { error: sessionError } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', chatId);
+        
+      if (sessionError) throw sessionError;
+      
+      // Remover do histórico local
+      setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
+      
+      // Limpar sessão atual se foi a que excluímos
+      if (chatSession?.id === chatId) {
+        setChatSession(null);
+        setMessages([]);
+      }
+      
+      toast.success("Conversa excluída com sucesso");
+    } catch (error) {
+      console.error("Erro ao excluir conversa:", error);
+      toast.error("Erro ao excluir conversa");
     }
   };
 
-  const clearAllChats = () => {
-    setChatHistory([]);
-    setChatSession(null);
-    setMessages([]);
-    localStorage.removeItem(getStorageKey());
+  const clearAllChats = async () => {
+    if (!user) return;
+    
+    try {
+      // Excluir todas as mensagens do usuário
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .in(
+          'session_id', 
+          chatHistory.map(chat => chat.id)
+        );
+        
+      if (messagesError) throw messagesError;
+      
+      // Excluir todas as sessões do usuário
+      const { error: sessionsError } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('user_id', user.id);
+        
+      if (sessionsError) throw sessionsError;
+      
+      // Limpar estados locais
+      setChatHistory([]);
+      setChatSession(null);
+      setMessages([]);
+      
+      toast.success("Todas as conversas foram excluídas");
+    } catch (error) {
+      console.error("Erro ao limpar histórico:", error);
+      toast.error("Erro ao limpar histórico de conversas");
+    }
   };
 
   return {
@@ -291,7 +477,8 @@ const useChat = (existingChatId?: string) => {
     chatHistory,
     aiTyping,
     deleteChat,
-    clearAllChats
+    clearAllChats,
+    isLoading
   };
 };
 

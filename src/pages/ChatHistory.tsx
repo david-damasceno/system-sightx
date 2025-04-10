@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -31,7 +31,8 @@ import {
   Info,
   Plus,
   X, 
-  MessageCircle
+  MessageCircle,
+  Loader2
 } from "lucide-react";
 import { ChatSession } from "../types";
 import useChat from "../hooks/useChat";
@@ -63,7 +64,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 const ChatHistory = () => {
-  const { chatHistory, deleteChat, clearAllChats } = useChat();
+  const { chatHistory, deleteChat, clearAllChats, isLoading } = useChat();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [isGridView, setIsGridView] = useState(true);
@@ -109,19 +110,16 @@ const ChatHistory = () => {
     acc[dateGroup].push(chat);
     return acc;
   }, {} as Record<string, ChatSession[]>);
-  
-  // Handle chat deletion
-  const handleDeleteChat = (id: string) => {
-    deleteChat(id);
-    toast.success("Conversa excluída com sucesso");
-  };
-  
-  // Handle clear all chats
-  const handleClearAllChats = () => {
-    clearAllChats();
-    setShowClearAllDialog(false);
-    toast.success("Todas as conversas foram excluídas");
-  };
+
+  // Mostrar indicador de carregamento enquanto buscamos os dados
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)]">
+        <Loader2 className="h-12 w-12 text-sightx-purple animate-spin mb-4" />
+        <p className="text-muted-foreground">Carregando histórico de conversas...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-6 animate-fade-in">
@@ -294,7 +292,7 @@ const ChatHistory = () => {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               <AlertDialogAction 
-                                onClick={() => handleDeleteChat(chat.id)}
+                                onClick={() => deleteChat(chat.id)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 Excluir
@@ -366,7 +364,7 @@ const ChatHistory = () => {
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                 <AlertDialogAction 
-                                  onClick={() => handleDeleteChat(chat.id)}
+                                  onClick={() => deleteChat(chat.id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   Excluir
@@ -412,7 +410,7 @@ const ChatHistory = () => {
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction 
-                  onClick={handleClearAllChats}
+                  onClick={clearAllChats}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   Limpar todo o histórico

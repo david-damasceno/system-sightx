@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,6 +13,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 const ChatWindow = () => {
   const {
     id
@@ -27,7 +30,8 @@ const ChatWindow = () => {
     sendMessage,
     isProcessing,
     aiTyping,
-    chatSession
+    chatSession,
+    isLoading
   } = useChat(id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -129,24 +133,49 @@ const ChatWindow = () => {
       toast.info("Compartilhamento não suportado neste navegador");
     }
   };
-  return <div className="flex flex-col h-screen">
+
+  // Mostrar indicador de carregamento enquanto buscamos os dados
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 text-sightx-purple animate-spin mb-4" />
+        <p className="text-muted-foreground">Carregando conversa...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen">
       {/* Search overlay */}
       {showSearch && <MessageSearch messages={messages} onSearchResult={handleSearchResult} onClose={() => setShowSearch(false)} />}
       
       {/* Chat messages area */}
-      <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-6" ref={scrollContainerRef} onScroll={handleScroll}>
-        {messages.length === 0 ? <div className="flex items-center justify-center h-full text-muted-foreground">
-            
-          </div> : messages.map((message, index) => {
-        const isTyping = message.isAI && index === messages.length - 1 && aiTyping.isTyping;
-        return <ChatMessage key={message.id} message={message} userAvatar={user?.avatar} typing={isTyping ? {
-          isActive: true,
-          partialContent: aiTyping.partialMessage
-        } : undefined} isHighlighted={message.id === highlightedMessageId} />;
-      })}
+      <ScrollArea className="flex-1 p-4 pt-6 space-y-6" onScrollCapture={handleScroll} ref={scrollContainerRef}>
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            <p className="text-center">Digite uma mensagem abaixo para iniciar a conversa.</p>
+          </div>
+        ) : (
+          messages.map((message, index) => {
+            const isTyping = message.isAI && index === messages.length - 1 && aiTyping.isTyping;
+            return (
+              <ChatMessage 
+                key={message.id} 
+                message={message} 
+                userAvatar={user?.avatar} 
+                typing={isTyping ? {
+                  isActive: true,
+                  partialContent: aiTyping.partialMessage
+                } : undefined} 
+                isHighlighted={message.id === highlightedMessageId} 
+              />
+            );
+          })
+        )}
         
         {/* AI is typing indicator */}
-        {isProcessing && !aiTyping.isTyping && <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
+        {isProcessing && !aiTyping.isTyping && (
+          <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sightx-purple">
               <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-5 w-5" />
             </div>
@@ -155,14 +184,34 @@ const ChatWindow = () => {
               <div className="w-2 h-2 rounded-full animate-pulse delay-150 bg-sightx-purple"></div>
               <div className="w-2 h-2 rounded-full animate-pulse delay-300 bg-sightx-purple"></div>
             </div>
-          </div>}
+          </div>
+        )}
         
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
-      </div>
+      </ScrollArea>
       
       {/* Chat input */}
-      <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} onOpenSearch={() => setShowSearch(true)} messages={messages} />
-    </div>;
+      <ChatInput 
+        onSendMessage={handleSendMessage} 
+        isProcessing={isProcessing} 
+        onOpenSearch={() => setShowSearch(true)} 
+        messages={messages} 
+      />
+
+      {/* Scroll to bottom button */}
+      {showScrollToBottom && (
+        <Button
+          size="icon"
+          variant="outline"
+          className="absolute bottom-20 right-4 rounded-full shadow-md animate-fade-in"
+          onClick={scrollToBottom}
+        >
+          <MessageCircle className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
 };
+
 export default ChatWindow;
