@@ -6,6 +6,10 @@ import { useMode } from "../contexts/ModeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import { Database } from "@/integrations/supabase/types";
+
+type ChatMessagesRow = Database['public']['Tables']['chat_messages']['Row'];
+type ChatSessionsRow = Database['public']['Tables']['chat_sessions']['Row'];
 
 const mockResponses = [
   "Olá! Como posso ajudar você hoje?",
@@ -67,7 +71,7 @@ const useChat = (existingChatId?: string) => {
       if (sessions) {
         // Converter os dados para o formato esperado
         const formattedSessions: ChatSession[] = await Promise.all(
-          sessions.map(async (session) => {
+          sessions.map(async (session: ChatSessionsRow) => {
             // Carregar mensagens para cada sessão
             const { data: messageData, error: messagesError } = await supabase
               .from('chat_messages')
@@ -78,7 +82,7 @@ const useChat = (existingChatId?: string) => {
             if (messagesError) throw messagesError;
             
             // Formatar mensagens
-            const formattedMessages: Message[] = messageData?.map(msg => ({
+            const formattedMessages: Message[] = messageData?.map((msg: ChatMessagesRow) => ({
               id: msg.id,
               content: msg.content,
               senderId: msg.sender_id,
@@ -86,9 +90,9 @@ const useChat = (existingChatId?: string) => {
               timestamp: new Date(msg.timestamp),
               ...(msg.attachment && {
                 attachment: {
-                  name: msg.attachment.name,
-                  type: msg.attachment.type,
-                  url: msg.attachment.url
+                  name: (msg.attachment as any).name,
+                  type: (msg.attachment as any).type,
+                  url: (msg.attachment as any).url
                 }
               })
             })) || [];
