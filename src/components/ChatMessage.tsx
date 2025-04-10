@@ -50,8 +50,8 @@ const ChatMessage = ({
       <Avatar className={cn("transition-all duration-300", isAI ? "border-sightx-purple/20" : "border-sightx-green/20")}>
         {isAI ? (
           <>
-            <AvatarImage src="/lovable-uploads/aa74ed4a-9983-4dd2-b4e3-a9906a723587.png" className="rounded-[20px]" />
-            <AvatarFallback className="bg-sightx-purple text-white rounded-[20px]">SX</AvatarFallback>
+            <AvatarImage src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" />
+            <AvatarFallback className="bg-sightx-purple text-white">SX</AvatarFallback>
           </>
         ) : (
           <>

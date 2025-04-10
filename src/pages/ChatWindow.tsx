@@ -136,11 +136,6 @@ const ChatWindow = () => {
       <ScrollArea className="flex-1 p-4 pt-6 space-y-6" onScrollCapture={handleScroll} ref={scrollContainerRef}>
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full flex-col gap-4 text-muted-foreground">
-            <img 
-              src="/lovable-uploads/aa74ed4a-9983-4dd2-b4e3-a9906a723587.png" 
-              alt="SightX Logo" 
-              className="h-20 w-20 rounded-[20px] mb-4" 
-            />
             <p className="text-center text-lg font-medium">Bem-vindo ao SightX Chat</p>
             <p className="text-center">Digite uma mensagem abaixo para iniciar a conversa.</p>
           </div>
@@ -166,7 +161,7 @@ const ChatWindow = () => {
         {isProcessing && !aiTyping.isTyping && (
           <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sightx-purple">
-              <img src="/lovable-uploads/aa74ed4a-9983-4dd2-b4e3-a9906a723587.png" alt="SightX Logo" className="h-5 w-5 rounded-[20px]" />
+              <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-5 w-5" />
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full animate-pulse bg-sightx-purple"></div>
