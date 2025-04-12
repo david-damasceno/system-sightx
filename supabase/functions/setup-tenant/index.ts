@@ -50,9 +50,22 @@ async function setupAirbyteDestination(schemaName) {
   
   try {
     const airbyteUrl = Deno.env.get("AIRBYTE_API_URL");
+    if (!airbyteUrl) {
+      throw new Error("URL da API do Airbyte não configurada");
+    }
+    
+    // Verificar se a URL contém o protocolo
+    const apiUrl = airbyteUrl.startsWith("http") ? 
+      airbyteUrl : 
+      `https://${airbyteUrl}`;
+    
     const airbyteWorkspaceId = Deno.env.get("AIRBYTE_WORKSPACE_ID");
     const airbyteUsername = Deno.env.get("AIRBYTE_USERNAME");
     const airbytePassword = Deno.env.get("AIRBYTE_PASSWORD");
+    
+    if (!airbyteWorkspaceId || !airbyteUsername || !airbytePassword) {
+      throw new Error("Credenciais do Airbyte não configuradas corretamente");
+    }
     
     const destinationName = `destino-sightx-${schemaName}`;
     
@@ -83,8 +96,20 @@ async function setupAirbyteDestination(schemaName) {
       }
     };
     
+    // Verificar se todos os parâmetros do banco de dados estão presentes
+    const requiredParams = ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"];
+    for (const param of requiredParams) {
+      if (!Deno.env.get(param)) {
+        throw new Error(`Parâmetro ${param} não configurado`);
+      }
+    }
+    
+    // Montar a URL completa da API
+    const apiEndpoint = `${apiUrl}/api/v1/destinations/create`;
+    console.log(`Chamando API Airbyte em: ${apiEndpoint}`);
+    
     // Criar o destination no Airbyte
-    const response = await fetch(`${airbyteUrl}/api/v1/destinations/create`, {
+    const response = await fetch(apiEndpoint, {
       method: "POST",
       headers: headers,
       body: JSON.stringify(payload),
@@ -92,7 +117,7 @@ async function setupAirbyteDestination(schemaName) {
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Erro na resposta do Airbyte: ${errorText}`);
+      console.error(`Erro na resposta do Airbyte (${response.status}): ${errorText}`);
       throw new Error(`Falha ao criar destination: ${response.status} ${errorText}`);
     }
     
@@ -135,9 +160,15 @@ async function activateTenant(tenantId, supabaseClient) {
     
     // Configurar o Storage
     const storageResult = await setupStorage(supabaseClient, tenant.schema_name);
+    if (!storageResult.success) {
+      throw new Error(`Falha ao configurar Storage: ${storageResult.error}`);
+    }
     
     // Configurar o Airbyte Destination
     const airbyteResult = await setupAirbyteDestination(tenant.schema_name);
+    if (!airbyteResult.success) {
+      throw new Error(`Falha ao configurar Airbyte: ${airbyteResult.error}`);
+    }
     
     // Atualizar o registro do tenant com os resultados
     const updates = {
@@ -169,13 +200,17 @@ async function activateTenant(tenantId, supabaseClient) {
     console.error(`Erro ao ativar tenant: ${error.message}`);
     
     // Atualizar o status do tenant para erro
-    await supabaseClient
-      .from('tenants')
-      .update({
-        status: 'error',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', tenantId);
+    try {
+      await supabaseClient
+        .from('tenants')
+        .update({
+          status: 'error',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tenantId);
+    } catch (updateError) {
+      console.error(`Erro adicional ao atualizar status do tenant: ${updateError.message}`);
+    }
     
     return { success: false, error: error.message };
   }
@@ -191,6 +226,11 @@ serve(async (req) => {
     // Criar cliente do Supabase com as credenciais de serviço
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://nhpqzxhbdiurhzjpghqz.supabase.co";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    
+    if (!supabaseKey) {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurada");
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Verificar se é uma requisição POST

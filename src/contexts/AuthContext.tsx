@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "../types";
 import { useNavigate } from "react-router-dom";
@@ -85,16 +84,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error("Erro ao ativar tenant:", error);
-        toast({
-          variant: "destructive",
-          title: "Erro na configuração",
-          description: "Não foi possível configurar seu ambiente. Por favor, contacte o suporte.",
-        });
+        
+        // Atualizar o status do tenant para erro diretamente
+        await supabase
+          .from('tenants')
+          .update({ status: 'error', updated_at: new Date().toISOString() })
+          .eq('id', tenantId);
+        
+        // Atualizar o tenant local
+        const errorTenant = await fetchTenant(user?.id || '');
+        
         return;
       }
 
       if (data.success) {
         console.log("Tenant ativado com sucesso:", data);
+        
+        // Se o Airbyte falhou, marcar como erro
+        if (data.airbyte && !data.airbyte.success) {
+          console.error("Erro na configuração do Airbyte:", data.airbyte.error);
+          
+          // Atualizar o status do tenant para erro diretamente
+          await supabase
+            .from('tenants')
+            .update({ status: 'error', updated_at: new Date().toISOString() })
+            .eq('id', tenantId);
+          
+          // Atualizar o tenant local
+          const errorTenant = await fetchTenant(user?.id || '');
+          
+          return;
+        }
+        
         toast({
           title: "Configuração concluída",
           description: "Seu ambiente foi configurado com sucesso.",
@@ -104,19 +125,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchTenant(user?.id || '');
       } else {
         console.error("Falha ao ativar tenant:", data.error);
-        toast({
-          variant: "destructive",
-          title: "Erro na configuração",
-          description: data.error || "Falha na configuração do ambiente.",
-        });
+        
+        // Atualizar o status do tenant para erro diretamente
+        await supabase
+          .from('tenants')
+          .update({ status: 'error', updated_at: new Date().toISOString() })
+          .eq('id', tenantId);
+        
+        // Atualizar o tenant local
+        const errorTenant = await fetchTenant(user?.id || '');
       }
     } catch (error: any) {
       console.error("Erro ao ativar tenant:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro na configuração",
-        description: error.message || "Falha na configuração do ambiente.",
-      });
+      
+      // Atualizar o status do tenant para erro diretamente
+      await supabase
+        .from('tenants')
+        .update({ status: 'error', updated_at: new Date().toISOString() })
+        .eq('id', tenantId);
+      
+      // Atualizar o tenant local
+      const errorTenant = await fetchTenant(user?.id || '');
     }
   };
 
