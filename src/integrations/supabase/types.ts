@@ -71,12 +71,48 @@ export type Database = {
         }
         Relationships: []
       }
+      tenants: {
+        Row: {
+          airbyte_destination_id: string | null
+          created_at: string | null
+          id: string
+          schema_name: string
+          status: string | null
+          storage_folder: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          airbyte_destination_id?: string | null
+          created_at?: string | null
+          id?: string
+          schema_name: string
+          status?: string | null
+          storage_folder?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          airbyte_destination_id?: string | null
+          created_at?: string | null
+          id?: string
+          schema_name?: string
+          status?: string | null
+          storage_folder?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_tenant_schema: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
