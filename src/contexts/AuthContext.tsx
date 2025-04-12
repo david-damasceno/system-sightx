@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "../types";
 import { useNavigate } from "react-router-dom";
@@ -43,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchTenant = async (userId: string) => {
     try {
+      console.log("Buscando tenant para o usuário:", userId);
       const { data, error } = await supabase
         .from('tenants')
         .select('*')
@@ -54,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
+      console.log("Tenant encontrado:", data);
       setTenant(data);
       return data;
     } catch (error) {
@@ -64,6 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const activateTenant = async (tenantId: string) => {
     try {
+      console.log("Iniciando ativação do tenant:", tenantId);
+      
+      // Verificar status atual do tenant
       const { data: tenantData } = await supabase
         .from('tenants')
         .select('status')
@@ -74,10 +80,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("Tenant já está ativo");
         return;
       }
+      
+      console.log("Chamando função setup-tenant...");
+      
+      // Atualizar o status do tenant para 'creating' antes de chamar a função
+      const { error: updateError } = await supabase
+        .from('tenants')
+        .update({ 
+          status: 'creating', 
+          updated_at: new Date().toISOString(),
+          error_message: null
+        })
+        .eq('id', tenantId);
+        
+      if (updateError) {
+        console.error("Erro ao atualizar status do tenant para 'creating':", updateError);
+      }
 
       const { data, error } = await supabase.functions.invoke('setup-tenant', {
         body: { tenantId }
       });
+
+      console.log("Resposta da função setup-tenant:", data, error);
 
       if (error) {
         console.error("Erro ao ativar tenant:", error);
@@ -92,6 +116,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', tenantId);
         
         const errorTenant = await fetchTenant(user?.id || '');
+        
+        toast({
+          variant: "destructive",
+          title: "Erro na configuração",
+          description: error.message || "Erro ao configurar o ambiente.",
+        });
         
         return;
       }
@@ -112,6 +142,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('id', tenantId);
           
           const errorTenant = await fetchTenant(user?.id || '');
+          
+          toast({
+            variant: "destructive",
+            title: "Erro na configuração do Airbyte",
+            description: data.airbyte.error || "Erro ao configurar o Airbyte.",
+          });
           
           return;
         }
@@ -135,6 +171,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', tenantId);
         
         const errorTenant = await fetchTenant(user?.id || '');
+        
+        toast({
+          variant: "destructive",
+          title: "Erro na configuração",
+          description: data.error || "Erro ao configurar o ambiente.",
+        });
       }
     } catch (error: any) {
       console.error("Erro ao ativar tenant:", error);
@@ -149,12 +191,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', tenantId);
       
       const errorTenant = await fetchTenant(user?.id || '');
+      
+      toast({
+        variant: "destructive",
+        title: "Erro na configuração",
+        description: error.message || "Erro ao configurar o ambiente.",
+      });
     }
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Evento de autenticação:", event);
         setSession(session);
         if (session?.user) {
           const userData: User = {
@@ -168,7 +217,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const tenantData = await fetchTenant(session.user.id);
           
           if (tenantData && tenantData.status === 'creating') {
-            activateTenant(tenantData.id);
+            console.log("Tenant em criação, ativando...");
+            // Use setTimeout para evitar conflitos com o evento de autenticação
+            setTimeout(() => {
+              activateTenant(tenantData.id);
+            }, 500);
           }
         } else {
           setUser(null);
@@ -191,7 +244,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const tenantData = await fetchTenant(session.user.id);
         
         if (tenantData && tenantData.status === 'creating') {
-          activateTenant(tenantData.id);
+          console.log("Tenant em criação, ativando...");
+          // Use setTimeout para evitar conflitos com o evento de autenticação
+          setTimeout(() => {
+            activateTenant(tenantData.id);
+          }, 500);
         }
       }
       setIsLoading(false);
@@ -260,9 +317,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Estamos configurando seu ambiente. Isso pode levar alguns minutos.",
       });
 
-      await supabase.functions.invoke('setup-tenant', {
-        body: { tenantId: data.user.id }
-      });
+      // Verificar se o tenant foi criado corretamente
+      console.log("Verificando se o tenant foi criado para o usuário:", data.user.id);
+      const tenantData = await fetchTenant(data.user.id);
+      
+      if (!tenantData) {
+        console.error("Tenant não foi criado automaticamente.");
+        toast({
+          variant: "destructive",
+          title: "Erro na criação do ambiente",
+          description: "Não foi possível criar seu ambiente. Tente novamente mais tarde.",
+        });
+        return;
+      }
+      
+      console.log("Tenant criado, iniciando ativação:", tenantData.id);
+      
+      // Iniciar ativação do tenant
+      setTimeout(() => {
+        activateTenant(tenantData.id);
+      }, 1000);
 
     } catch (error: any) {
       console.error("Erro ao criar conta:", error);

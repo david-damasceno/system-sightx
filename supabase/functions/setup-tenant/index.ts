@@ -13,16 +13,34 @@ async function setupStorage(supabaseClient, schemaName) {
   console.log(`Configurando Storage para o schema: ${schemaName}`);
   
   try {
-    // Criar uma pasta para o tenant
-    const { error: storageError } = await supabaseClient
+    // Verificar se o bucket já existe
+    const { data: existingBuckets, error: checkError } = await supabaseClient
       .storage
-      .createBucket(schemaName, {
-        public: false
-      });
+      .listBuckets();
+      
+    if (checkError) {
+      console.error(`Erro ao verificar buckets existentes: ${checkError.message}`);
+      throw checkError;
+    }
     
-    if (storageError) {
-      console.error(`Erro ao criar bucket de storage: ${storageError.message}`);
-      throw storageError;
+    const bucketExists = existingBuckets.some(bucket => bucket.name === schemaName);
+    
+    if (!bucketExists) {
+      // Criar uma pasta para o tenant apenas se não existir
+      const { error: storageError } = await supabaseClient
+        .storage
+        .createBucket(schemaName, {
+          public: false
+        });
+      
+      if (storageError) {
+        console.error(`Erro ao criar bucket de storage: ${storageError.message}`);
+        throw storageError;
+      }
+      
+      console.log(`Bucket de storage criado com sucesso: ${schemaName}`);
+    } else {
+      console.log(`Bucket de storage já existe: ${schemaName}`);
     }
     
     // Atualizar o registro do tenant com a referência da pasta
@@ -58,7 +76,7 @@ async function setupAirbyteDestination(schemaName) {
     const apiUrl = airbyteUrl.startsWith("http") ? 
       airbyteUrl : 
       `https://${airbyteUrl}`;
-    
+      
     console.log(`URL da API do Airbyte: ${apiUrl}`);
     
     const airbyteWorkspaceId = Deno.env.get("AIRBYTE_WORKSPACE_ID");
@@ -114,7 +132,24 @@ async function setupAirbyteDestination(schemaName) {
     
     console.log(`Payload do destination: ${JSON.stringify(payload, null, 2)}`);
     
-    // Montar a URL completa da API - corrigir o caminho do endpoint
+    // Testando URL do Airbyte
+    try {
+      const testResponse = await fetch(`${apiUrl}/health`, {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+      });
+      
+      console.log(`Teste de saúde do Airbyte: ${testResponse.status} ${testResponse.statusText}`);
+      
+      if (!testResponse.ok) {
+        const testBody = await testResponse.text();
+        console.error(`Erro no teste de saúde do Airbyte: ${testBody}`);
+      }
+    } catch (healthError) {
+      console.error(`Erro ao testar conectividade com Airbyte: ${healthError.message}`);
+    }
+    
+    // Montar a URL completa da API - ajuste para o padrão da API do Airbyte OSS
     const apiEndpoint = `${apiUrl}/api/v1/destinations/create`;
     console.log(`Chamando API Airbyte em: ${apiEndpoint}`);
     
@@ -140,6 +175,36 @@ async function setupAirbyteDestination(schemaName) {
         // Não é JSON, ignorar
       }
       
+      // Testar com versão alternativa da URL para Airbyte OSS
+      try {
+        console.log("Tentando URL alternativa do Airbyte OSS...");
+        const alternativeEndpoint = `${apiUrl}/api/destinations/create`;
+        console.log(`URL alternativa: ${alternativeEndpoint}`);
+        
+        const alternativeResponse = await fetch(alternativeEndpoint, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(payload),
+        });
+        
+        console.log(`Resposta alternativa: ${alternativeResponse.status} ${alternativeResponse.statusText}`);
+        
+        if (alternativeResponse.ok) {
+          const result = await alternativeResponse.json();
+          console.log(`Destination criado com sucesso (URL alternativa): ${JSON.stringify(result, null, 2)}`);
+          return {
+            success: true,
+            destinationId: result.destinationId || result.destinationId || result.id,
+            destinationName: destinationName
+          };
+        } else {
+          const altErrorText = await alternativeResponse.text();
+          console.error(`Erro também na URL alternativa (${alternativeResponse.status}): ${altErrorText}`);
+        }
+      } catch (altError) {
+        console.error(`Erro ao tentar URL alternativa: ${altError.message}`);
+      }
+      
       throw new Error(`Falha ao criar destination: ${response.status} ${errorText}`);
     }
     
@@ -148,7 +213,7 @@ async function setupAirbyteDestination(schemaName) {
     
     return {
       success: true,
-      destinationId: result.destinationId,
+      destinationId: result.destinationId || result.destinationId || result.id,
       destinationName: destinationName
     };
   } catch (error) {
@@ -227,7 +292,8 @@ async function activateTenant(tenantId, supabaseClient) {
         .from('tenants')
         .update({
           status: 'error',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          error_message: error.message
         })
         .eq('id', tenantId);
     } catch (updateError) {
@@ -246,13 +312,18 @@ serve(async (req) => {
 
   try {
     // Criar cliente do Supabase com as credenciais de serviço
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://nhpqzxhbdiurhzjpghqz.supabase.co";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl) {
+      throw new Error("SUPABASE_URL não configurada");
+    }
     
     if (!supabaseKey) {
       throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurada");
     }
     
+    console.log(`Criando cliente Supabase com URL: ${supabaseUrl}`);
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Verificar se é uma requisição POST
@@ -263,6 +334,8 @@ serve(async (req) => {
     // Obter dados da requisição
     const body = await req.json();
     const { tenantId } = body;
+    
+    console.log(`Requisição recebida para tenantId: ${tenantId}`);
     
     if (!tenantId) {
       throw new Error("ID do tenant não fornecido.");

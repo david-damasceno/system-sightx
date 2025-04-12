@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ChatLayout = () => {
   const { isAuthenticated, isLoading, tenant } = useAuth();
@@ -20,6 +21,7 @@ const ChatLayout = () => {
   useEffect(() => {
     // Mostrar o diálogo de erro se o tenant tiver status de erro
     if (tenant && tenant.status === 'error') {
+      console.log("Tenant com status de erro:", tenant);
       setShowErrorDialog(true);
       // Se houver uma mensagem de erro específica, exibir
       if (tenant.error_message) {
