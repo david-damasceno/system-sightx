@@ -11,6 +11,7 @@ interface Tenant {
   storage_folder: string | null;
   airbyte_destination_id: string | null;
   status: string;
+  error_message?: string;
 }
 
 interface AuthContextType {
@@ -40,7 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
 
-  // Função para buscar o tenant do usuário atual
   const fetchTenant = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -62,10 +62,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Função para ativar tenant recém-criado
   const activateTenant = async (tenantId: string) => {
     try {
-      // Verificar se o tenant já está ativo
       const { data: tenantData } = await supabase
         .from('tenants')
         .select('status')
@@ -77,7 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Chamar a Edge Function para ativar o tenant
       const { data, error } = await supabase.functions.invoke('setup-tenant', {
         body: { tenantId }
       });
@@ -85,13 +82,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error("Erro ao ativar tenant:", error);
         
-        // Atualizar o status do tenant para erro diretamente
         await supabase
           .from('tenants')
-          .update({ status: 'error', updated_at: new Date().toISOString() })
+          .update({ 
+            status: 'error', 
+            updated_at: new Date().toISOString(),
+            error_message: error.message || "Erro ao configurar o ambiente."
+          })
           .eq('id', tenantId);
         
-        // Atualizar o tenant local
         const errorTenant = await fetchTenant(user?.id || '');
         
         return;
@@ -100,17 +99,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.success) {
         console.log("Tenant ativado com sucesso:", data);
         
-        // Se o Airbyte falhou, marcar como erro
         if (data.airbyte && !data.airbyte.success) {
           console.error("Erro na configuração do Airbyte:", data.airbyte.error);
           
-          // Atualizar o status do tenant para erro diretamente
           await supabase
             .from('tenants')
-            .update({ status: 'error', updated_at: new Date().toISOString() })
+            .update({ 
+              status: 'error', 
+              updated_at: new Date().toISOString(),
+              error_message: `Erro ao configurar o Airbyte: ${data.airbyte.error}`
+            })
             .eq('id', tenantId);
           
-          // Atualizar o tenant local
           const errorTenant = await fetchTenant(user?.id || '');
           
           return;
@@ -121,36 +121,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: "Seu ambiente foi configurado com sucesso.",
         });
         
-        // Atualizar o tenant local
         await fetchTenant(user?.id || '');
       } else {
         console.error("Falha ao ativar tenant:", data.error);
         
-        // Atualizar o status do tenant para erro diretamente
         await supabase
           .from('tenants')
-          .update({ status: 'error', updated_at: new Date().toISOString() })
+          .update({ 
+            status: 'error', 
+            updated_at: new Date().toISOString(),
+            error_message: data.error || "Erro ao configurar o ambiente."
+          })
           .eq('id', tenantId);
         
-        // Atualizar o tenant local
         const errorTenant = await fetchTenant(user?.id || '');
       }
     } catch (error: any) {
       console.error("Erro ao ativar tenant:", error);
       
-      // Atualizar o status do tenant para erro diretamente
       await supabase
         .from('tenants')
-        .update({ status: 'error', updated_at: new Date().toISOString() })
+        .update({ 
+          status: 'error', 
+          updated_at: new Date().toISOString(),
+          error_message: error.message || "Erro ao configurar o ambiente."
+        })
         .eq('id', tenantId);
       
-      // Atualizar o tenant local
       const errorTenant = await fetchTenant(user?.id || '');
     }
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -163,10 +165,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           setUser(userData);
           
-          // Buscar tenant após autenticação
           const tenantData = await fetchTenant(session.user.id);
           
-          // Se encontrou o tenant e ele está em estado de criação, ativar
           if (tenantData && tenantData.status === 'creating') {
             activateTenant(tenantData.id);
           }
@@ -177,7 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
@@ -189,10 +188,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         setUser(userData);
         
-        // Buscar tenant ao iniciar
         const tenantData = await fetchTenant(session.user.id);
         
-        // Se encontrou o tenant e ele está em estado de criação, ativar
         if (tenantData && tenantData.status === 'creating') {
           activateTenant(tenantData.id);
         }
@@ -226,7 +223,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: "Bem-vindo ao SightX!",
         });
         
-        // Buscar tenant após login
         await fetchTenant(data.user.id);
       }
 
@@ -264,8 +260,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Estamos configurando seu ambiente. Isso pode levar alguns minutos.",
       });
 
-      // O tenant será criado automaticamente pelo trigger do banco de dados
-      // e será ativado na próxima vez que o usuário fizer login
+      await supabase.functions.invoke('setup-tenant', {
+        body: { tenantId: data.user.id }
+      });
 
     } catch (error: any) {
       console.error("Erro ao criar conta:", error);

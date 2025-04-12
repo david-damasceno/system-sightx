@@ -15,17 +15,22 @@ const ChatLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("Erro ao configurar o ambiente. Tente novamente mais tarde.");
 
   useEffect(() => {
     // Mostrar o diálogo de erro se o tenant tiver status de erro
     if (tenant && tenant.status === 'error') {
       setShowErrorDialog(true);
+      // Se houver uma mensagem de erro específica, exibir
+      if (tenant.error_message) {
+        setErrorMessage(tenant.error_message);
+      }
     }
   }, [tenant]);
 
   const handleCloseErrorDialog = () => {
     setShowErrorDialog(false);
-    navigate("/chat");
+    navigate("/");
   };
 
   // Show loading state
@@ -76,7 +81,7 @@ const ChatLayout = () => {
           <DialogHeader>
             <DialogTitle className="text-destructive">Erro na configuração do ambiente</DialogTitle>
             <DialogDescription>
-              Erro ao configurar o ambiente. Tente novamente mais tarde.
+              {errorMessage}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

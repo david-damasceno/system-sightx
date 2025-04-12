@@ -59,6 +59,8 @@ async function setupAirbyteDestination(schemaName) {
       airbyteUrl : 
       `https://${airbyteUrl}`;
     
+    console.log(`URL da API do Airbyte: ${apiUrl}`);
+    
     const airbyteWorkspaceId = Deno.env.get("AIRBYTE_WORKSPACE_ID");
     const airbyteUsername = Deno.env.get("AIRBYTE_USERNAME");
     const airbytePassword = Deno.env.get("AIRBYTE_PASSWORD");
@@ -69,14 +71,28 @@ async function setupAirbyteDestination(schemaName) {
     
     const destinationName = `destino-sightx-${schemaName}`;
     
+    // Formatando credenciais para Basic Auth
+    const authString = `${airbyteUsername}:${airbytePassword}`;
+    const base64Auth = btoa(authString);
+    
     // Configuração para autenticação Basic
     const headers = {
       "Content-Type": "application/json",
-      "Authorization": `Basic ${btoa(`${airbyteUsername}:${airbytePassword}`)}`
+      "Authorization": `Basic ${base64Auth}`
     };
+    
+    console.log("Headers de autenticação configurados");
     
     // Configuração da conexão PostgreSQL para o Airbyte
     const destinationDefinitionId = "25c5221d-dce2-4163-ade9-739ef790f503"; // ID da definição do PostgreSQL
+    
+    // Verificar se todos os parâmetros do banco de dados estão presentes
+    const requiredParams = ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"];
+    for (const param of requiredParams) {
+      if (!Deno.env.get(param)) {
+        throw new Error(`Parâmetro ${param} não configurado`);
+      }
+    }
     
     // Payload para criar o destination
     const payload = {
@@ -96,15 +112,9 @@ async function setupAirbyteDestination(schemaName) {
       }
     };
     
-    // Verificar se todos os parâmetros do banco de dados estão presentes
-    const requiredParams = ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"];
-    for (const param of requiredParams) {
-      if (!Deno.env.get(param)) {
-        throw new Error(`Parâmetro ${param} não configurado`);
-      }
-    }
+    console.log(`Payload do destination: ${JSON.stringify(payload, null, 2)}`);
     
-    // Montar a URL completa da API
+    // Montar a URL completa da API - corrigir o caminho do endpoint
     const apiEndpoint = `${apiUrl}/api/v1/destinations/create`;
     console.log(`Chamando API Airbyte em: ${apiEndpoint}`);
     
@@ -115,14 +125,26 @@ async function setupAirbyteDestination(schemaName) {
       body: JSON.stringify(payload),
     });
     
+    // Log da resposta HTTP
+    console.log(`Resposta HTTP: ${response.status} ${response.statusText}`);
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Erro na resposta do Airbyte (${response.status}): ${errorText}`);
+      
+      // Tentar obter mais detalhes se for um JSON
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.error("Detalhes do erro:", JSON.stringify(errorJson, null, 2));
+      } catch (e) {
+        // Não é JSON, ignorar
+      }
+      
       throw new Error(`Falha ao criar destination: ${response.status} ${errorText}`);
     }
     
     const result = await response.json();
-    console.log(`Destination criado com sucesso: ${result.destinationId}`);
+    console.log(`Destination criado com sucesso: ${JSON.stringify(result, null, 2)}`);
     
     return {
       success: true,
