@@ -87,33 +87,6 @@ const ChatLayout = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Mostrar tela de carregamento se o tenant estiver sendo configurado
-  if (tenant && tenant.status === 'creating') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="h-20 w-20 mb-8 rounded-[20px] flex items-center justify-center bg-sightx-purple/10">
-          <img 
-            src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-            alt="SightX Logo" 
-            className="h-12 w-12 animate-pulse rounded-[20px]" 
-          />
-        </div>
-        <Loader2 className="h-8 w-8 animate-spin text-sightx-purple mb-4" />
-        <p className="mt-2 text-muted-foreground">Configurando seu ambiente...</p>
-        <p className="text-sm text-muted-foreground mb-4">Isso pode levar alguns minutos.</p>
-        
-        {/* Barra de progresso */}
-        <div className="w-64 bg-gray-200 rounded-full h-2.5 mb-2">
-          <div 
-            className="bg-sightx-purple h-2.5 rounded-full transition-all duration-500 ease-out" 
-            style={{ width: `${setupProgress}%` }}
-          ></div>
-        </div>
-        <p className="text-xs text-muted-foreground">{setupProgress}% concluído</p>
-      </div>
-    );
-  }
-
   // Diálogo de erro para problemas na configuração
   return (
     <>

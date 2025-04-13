@@ -67,70 +67,54 @@ async function checkExistingDestination(airbyteUrl, authHeaders, workspaceId, de
   console.log(`Verificando se destination "${destinationName}" já existe no Airbyte...`);
   
   try {
-    // Lista de possíveis endpoints para obter destinations
-    const possibleEndpoints = [
-      `${airbyteUrl}/api/v1/destinations/list`,
-      `${airbyteUrl}/api/destinations/list`,
-      `${airbyteUrl}/destinations/list`
-    ];
+    // Endpoint correto para verificar destinations existentes
+    const endpoint = `${airbyteUrl}/api/v1/destinations/list`;
     
-    for (const endpoint of possibleEndpoints) {
-      try {
-        console.log(`Tentando listar destinations via ${endpoint}`);
-        
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: authHeaders,
-          body: JSON.stringify({ workspaceId }),
-        });
-        
-        if (!response.ok) {
-          console.log(`Endpoint ${endpoint} retornou status ${response.status}, tentando próximo...`);
-          continue;
-        }
-        
-        const data = await response.json();
-        console.log(`Resposta de listagem de destinations recebida, verificando por "${destinationName}"`);
-        
-        // Verificar diferentes formatos de resposta
-        const destinations = data.destinations || data;
-        
-        if (!Array.isArray(destinations)) {
-          console.log(`Formato de resposta inesperado do endpoint ${endpoint}, tentando próximo...`);
-          continue;
-        }
-        
-        // Procurar pelo destination pelo nome
-        const existingDestination = destinations.find(d => 
-          d.name === destinationName || 
-          (d.destination && d.destination.name === destinationName)
-        );
-        
-        if (existingDestination) {
-          console.log(`Destination "${destinationName}" já existe!`);
-          // Extrair o ID do destination conforme o formato da resposta
-          const destinationId = existingDestination.destinationId || 
-                              existingDestination.id || 
-                              (existingDestination.destination && existingDestination.destination.destinationId);
-          
-          if (destinationId) {
-            return { exists: true, destinationId };
-          }
-        }
-        
-        // Se chegamos aqui, a listagem funcionou mas não encontramos o destination
-        console.log(`Destination "${destinationName}" não encontrado na lista.`);
-        return { exists: false };
-      } catch (error) {
-        console.error(`Erro ao verificar destinations via ${endpoint}: ${error.message}`);
-        // Continuar tentando outros endpoints
+    console.log(`Listando destinations via ${endpoint}`);
+    
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ workspaceId }),
+    });
+    
+    if (!response.ok) {
+      console.log(`Endpoint ${endpoint} retornou status ${response.status}`);
+      return { exists: false };
+    }
+    
+    const data = await response.json();
+    console.log(`Resposta de listagem de destinations recebida, verificando por "${destinationName}"`);
+    
+    // Verificar diferentes formatos de resposta
+    const destinations = data.destinations || data;
+    
+    if (!Array.isArray(destinations)) {
+      console.log(`Formato de resposta inesperado, não é uma lista`);
+      return { exists: false };
+    }
+    
+    // Procurar pelo destination pelo nome
+    const existingDestination = destinations.find(d => 
+      d.name === destinationName || 
+      (d.destination && d.destination.name === destinationName)
+    );
+    
+    if (existingDestination) {
+      console.log(`Destination "${destinationName}" já existe!`);
+      // Extrair o ID do destination conforme o formato da resposta
+      const destinationId = existingDestination.destinationId || 
+                          existingDestination.id || 
+                          (existingDestination.destination && existingDestination.destination.destinationId);
+      
+      if (destinationId) {
+        return { exists: true, destinationId };
       }
     }
     
-    // Se nenhum endpoint funcionou, assumimos que não existe
-    console.log(`Não foi possível verificar se destination já existe. Assumindo que não existe.`);
+    // Se chegamos aqui, a listagem funcionou mas não encontramos o destination
+    console.log(`Destination "${destinationName}" não encontrado na lista.`);
     return { exists: false };
-    
   } catch (error) {
     console.error(`Erro ao verificar destination existente: ${error.message}`);
     return { exists: false };
@@ -248,76 +232,49 @@ async function setupAirbyteDestination(schemaName) {
       // Continuamos mesmo com erro no health check
     }
     
-    // Lista de possíveis endpoints para diferentes versões/configurações do Airbyte OSS
-    const possibleEndpoints = [
-      `${apiUrl}/api/v1/destinations/create`,
-      `${apiUrl}/api/destinations/create`,
-      `${apiUrl}/destinations/create`,
-      `${apiUrl}/api/v1/destinations`
-    ];
+    // Usar o endpoint correto para criar o destination
+    const endpoint = `${apiUrl}/api/v1/destinations/create`;
+    console.log(`Criando destination no endpoint: ${endpoint}`);
     
-    let success = false;
-    let result = null;
-    let lastError = null;
-    
-    // Tentar cada endpoint possível
-    for (const endpoint of possibleEndpoints) {
-      if (success) break;
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+      });
       
-      console.log(`Tentando criar destination no endpoint: ${endpoint}`);
+      console.log(`Resposta de ${endpoint}: ${response.status} ${response.statusText}`);
       
-      try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify(payload),
-        });
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log(`Destination criado com sucesso: ${JSON.stringify(responseData, null, 2)}`);
         
-        console.log(`Resposta de ${endpoint}: ${response.status} ${response.statusText}`);
+        // Extrair o ID do destination de acordo com a estrutura de resposta
+        const destinationId = responseData.destinationId || responseData.id || (responseData.destination && responseData.destination.destinationId);
         
-        if (response.ok) {
-          const responseData = await response.json();
-          console.log(`Destination criado com sucesso via ${endpoint}: ${JSON.stringify(responseData, null, 2)}`);
-          success = true;
-          result = responseData;
-          break;
-        } else {
-          const errorText = await response.text();
-          console.error(`Erro no endpoint ${endpoint} (${response.status}): ${errorText}`);
-          
-          try {
-            lastError = JSON.parse(errorText);
-          } catch (e) {
-            lastError = { message: errorText };
-          }
+        if (!destinationId) {
+          throw new Error("ID do destination não encontrado na resposta, embora a operação tenha sido bem-sucedida");
         }
-      } catch (fetchError) {
-        console.error(`Erro ao chamar ${endpoint}: ${fetchError.message}`);
-        lastError = { message: fetchError.message };
+        
+        return {
+          success: true,
+          destinationId: destinationId,
+          destinationName: destinationName
+        };
+      } else {
+        const errorText = await response.text();
+        console.error(`Erro no endpoint ${endpoint} (${response.status}): ${errorText}`);
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(`Falha ao criar destination: ${JSON.stringify(errorJson)}`);
+        } catch (e) {
+          throw new Error(`Falha ao criar destination: ${errorText}`);
+        }
       }
-    }
-    
-    // Verificar se algum endpoint teve sucesso
-    if (success && result) {
-      // Extrair o ID do destination de acordo com a estrutura de resposta
-      const destinationId = result.destinationId || result.id || (result.destination && result.destination.destinationId);
-      
-      if (!destinationId) {
-        throw new Error("ID do destination não encontrado na resposta, embora a operação tenha sido bem-sucedida");
-      }
-      
-      return {
-        success: true,
-        destinationId: destinationId,
-        destinationName: destinationName
-      };
-    } else {
-      // Se nenhum endpoint teve sucesso, lançar o último erro
-      const errorMsg = lastError ? 
-        (typeof lastError === 'object' ? JSON.stringify(lastError) : lastError) : 
-        "Todos os endpoints falharam, sem detalhes adicionais";
-      
-      throw new Error(`Falha ao criar destination. ${errorMsg}`);
+    } catch (fetchError) {
+      console.error(`Erro ao chamar ${endpoint}: ${fetchError.message}`);
+      throw fetchError;
     }
   } catch (error) {
     console.error(`Erro ao configurar Airbyte: ${error.message}`);
