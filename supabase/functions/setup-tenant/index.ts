@@ -72,12 +72,9 @@ async function setupAirbyteDestination(schemaName) {
       throw new Error("URL da API do Airbyte não configurada");
     }
     
-    // Verificar se a URL contém o protocolo
-    const apiUrl = airbyteUrl.startsWith("http") ? 
-      airbyteUrl : 
-      `https://${airbyteUrl}`;
-      
-    console.log(`URL da API do Airbyte: ${apiUrl}`);
+    // Verificar e normalizar a URL do Airbyte
+    const apiUrl = airbyteUrl.trim().replace(/\/$/, ""); // Remove espaços e barra final
+    console.log(`URL da API do Airbyte normalizada: ${apiUrl}`);
     
     const airbyteWorkspaceId = Deno.env.get("AIRBYTE_WORKSPACE_ID");
     const airbyteUsername = Deno.env.get("AIRBYTE_USERNAME");
@@ -86,6 +83,10 @@ async function setupAirbyteDestination(schemaName) {
     if (!airbyteWorkspaceId || !airbyteUsername || !airbytePassword) {
       throw new Error("Credenciais do Airbyte não configuradas corretamente");
     }
+    
+    console.log(`Workspace ID: ${airbyteWorkspaceId}`);
+    console.log(`Username: ${airbyteUsername}`);
+    console.log(`Password: ${airbytePassword.substring(0, 3)}...`); // Log parcial da senha por segurança
     
     const destinationName = `destino-sightx-${schemaName}`;
     
@@ -102,7 +103,8 @@ async function setupAirbyteDestination(schemaName) {
     console.log("Headers de autenticação configurados");
     
     // Configuração da conexão PostgreSQL para o Airbyte
-    const destinationDefinitionId = "25c5221d-dce2-4163-ade9-739ef790f503"; // ID da definição do PostgreSQL
+    // Para o Airbyte OSS, o destinationDefinitionId para PostgreSQL
+    const destinationDefinitionId = "25c5221d-dce2-4163-ade9-739ef790f503"; // ID padrão para PostgreSQL no Airbyte
     
     // Verificar se todos os parâmetros do banco de dados estão presentes
     const requiredParams = ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"];
@@ -112,7 +114,7 @@ async function setupAirbyteDestination(schemaName) {
       }
     }
     
-    // Payload para criar o destination
+    // Payload para criar o destination - formato específico para Airbyte OSS
     const payload = {
       workspaceId: airbyteWorkspaceId,
       name: destinationName,
@@ -132,9 +134,12 @@ async function setupAirbyteDestination(schemaName) {
     
     console.log(`Payload do destination: ${JSON.stringify(payload, null, 2)}`);
     
-    // Testando URL do Airbyte
+    // Testar conectividade com Airbyte antes de fazer a chamada principal
     try {
-      const testResponse = await fetch(`${apiUrl}/health`, {
+      const healthCheckUrl = `${apiUrl}/health`;
+      console.log(`Testando conectividade com Airbyte em: ${healthCheckUrl}`);
+      
+      const testResponse = await fetch(healthCheckUrl, {
         method: "GET",
         headers: { "Accept": "application/json" }
       });
@@ -147,75 +152,80 @@ async function setupAirbyteDestination(schemaName) {
       }
     } catch (healthError) {
       console.error(`Erro ao testar conectividade com Airbyte: ${healthError.message}`);
+      // Continuamos mesmo com erro no health check
     }
     
-    // Montar a URL completa da API - ajuste para o padrão da API do Airbyte OSS
-    const apiEndpoint = `${apiUrl}/api/v1/destinations/create`;
-    console.log(`Chamando API Airbyte em: ${apiEndpoint}`);
+    // Lista de possíveis endpoints para diferentes versões/configurações do Airbyte OSS
+    const possibleEndpoints = [
+      `${apiUrl}/api/v1/destinations/create`,
+      `${apiUrl}/api/destinations/create`,
+      `${apiUrl}/destinations/create`,
+      `${apiUrl}/api/v1/destinations`
+    ];
     
-    // Criar o destination no Airbyte
-    const response = await fetch(apiEndpoint, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(payload),
-    });
+    let success = false;
+    let result = null;
+    let lastError = null;
     
-    // Log da resposta HTTP
-    console.log(`Resposta HTTP: ${response.status} ${response.statusText}`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Erro na resposta do Airbyte (${response.status}): ${errorText}`);
+    // Tentar cada endpoint possível
+    for (const endpoint of possibleEndpoints) {
+      if (success) break;
       
-      // Tentar obter mais detalhes se for um JSON
-      try {
-        const errorJson = JSON.parse(errorText);
-        console.error("Detalhes do erro:", JSON.stringify(errorJson, null, 2));
-      } catch (e) {
-        // Não é JSON, ignorar
-      }
+      console.log(`Tentando criar destination no endpoint: ${endpoint}`);
       
-      // Testar com versão alternativa da URL para Airbyte OSS
       try {
-        console.log("Tentando URL alternativa do Airbyte OSS...");
-        const alternativeEndpoint = `${apiUrl}/api/destinations/create`;
-        console.log(`URL alternativa: ${alternativeEndpoint}`);
-        
-        const alternativeResponse = await fetch(alternativeEndpoint, {
+        const response = await fetch(endpoint, {
           method: "POST",
           headers: headers,
           body: JSON.stringify(payload),
         });
         
-        console.log(`Resposta alternativa: ${alternativeResponse.status} ${alternativeResponse.statusText}`);
+        console.log(`Resposta de ${endpoint}: ${response.status} ${response.statusText}`);
         
-        if (alternativeResponse.ok) {
-          const result = await alternativeResponse.json();
-          console.log(`Destination criado com sucesso (URL alternativa): ${JSON.stringify(result, null, 2)}`);
-          return {
-            success: true,
-            destinationId: result.destinationId || result.destinationId || result.id,
-            destinationName: destinationName
-          };
+        if (response.ok) {
+          const responseData = await response.json();
+          console.log(`Destination criado com sucesso via ${endpoint}: ${JSON.stringify(responseData, null, 2)}`);
+          success = true;
+          result = responseData;
+          break;
         } else {
-          const altErrorText = await alternativeResponse.text();
-          console.error(`Erro também na URL alternativa (${alternativeResponse.status}): ${altErrorText}`);
+          const errorText = await response.text();
+          console.error(`Erro no endpoint ${endpoint} (${response.status}): ${errorText}`);
+          
+          try {
+            lastError = JSON.parse(errorText);
+          } catch (e) {
+            lastError = { message: errorText };
+          }
         }
-      } catch (altError) {
-        console.error(`Erro ao tentar URL alternativa: ${altError.message}`);
+      } catch (fetchError) {
+        console.error(`Erro ao chamar ${endpoint}: ${fetchError.message}`);
+        lastError = { message: fetchError.message };
       }
-      
-      throw new Error(`Falha ao criar destination: ${response.status} ${errorText}`);
     }
     
-    const result = await response.json();
-    console.log(`Destination criado com sucesso: ${JSON.stringify(result, null, 2)}`);
-    
-    return {
-      success: true,
-      destinationId: result.destinationId || result.destinationId || result.id,
-      destinationName: destinationName
-    };
+    // Verificar se algum endpoint teve sucesso
+    if (success && result) {
+      // Extrair o ID do destination de acordo com a estrutura de resposta
+      const destinationId = result.destinationId || result.id || (result.destination && result.destination.destinationId);
+      
+      if (!destinationId) {
+        throw new Error("ID do destination não encontrado na resposta, embora a operação tenha sido bem-sucedida");
+      }
+      
+      return {
+        success: true,
+        destinationId: destinationId,
+        destinationName: destinationName
+      };
+    } else {
+      // Se nenhum endpoint teve sucesso, lançar o último erro
+      const errorMsg = lastError ? 
+        (typeof lastError === 'object' ? JSON.stringify(lastError) : lastError) : 
+        "Todos os endpoints falharam, sem detalhes adicionais";
+      
+      throw new Error(`Falha ao criar destination. ${errorMsg}`);
+    }
   } catch (error) {
     console.error(`Erro ao configurar Airbyte: ${error.message}`);
     return { success: false, error: error.message };
@@ -260,7 +270,8 @@ async function activateTenant(tenantId, supabaseClient) {
     // Atualizar o registro do tenant com os resultados
     const updates = {
       status: 'active',
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      error_message: null
     };
     
     if (airbyteResult.success) {
