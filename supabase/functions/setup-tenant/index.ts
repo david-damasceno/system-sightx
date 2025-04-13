@@ -62,6 +62,81 @@ async function setupStorage(supabaseClient, schemaName) {
   }
 }
 
+// Função para verificar se um destination já existe no Airbyte
+async function checkExistingDestination(airbyteUrl, authHeaders, workspaceId, destinationName) {
+  console.log(`Verificando se destination "${destinationName}" já existe no Airbyte...`);
+  
+  try {
+    // Lista de possíveis endpoints para obter destinations
+    const possibleEndpoints = [
+      `${airbyteUrl}/api/v1/destinations/list`,
+      `${airbyteUrl}/api/destinations/list`,
+      `${airbyteUrl}/destinations/list`
+    ];
+    
+    for (const endpoint of possibleEndpoints) {
+      try {
+        console.log(`Tentando listar destinations via ${endpoint}`);
+        
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({ workspaceId }),
+        });
+        
+        if (!response.ok) {
+          console.log(`Endpoint ${endpoint} retornou status ${response.status}, tentando próximo...`);
+          continue;
+        }
+        
+        const data = await response.json();
+        console.log(`Resposta de listagem de destinations recebida, verificando por "${destinationName}"`);
+        
+        // Verificar diferentes formatos de resposta
+        const destinations = data.destinations || data;
+        
+        if (!Array.isArray(destinations)) {
+          console.log(`Formato de resposta inesperado do endpoint ${endpoint}, tentando próximo...`);
+          continue;
+        }
+        
+        // Procurar pelo destination pelo nome
+        const existingDestination = destinations.find(d => 
+          d.name === destinationName || 
+          (d.destination && d.destination.name === destinationName)
+        );
+        
+        if (existingDestination) {
+          console.log(`Destination "${destinationName}" já existe!`);
+          // Extrair o ID do destination conforme o formato da resposta
+          const destinationId = existingDestination.destinationId || 
+                              existingDestination.id || 
+                              (existingDestination.destination && existingDestination.destination.destinationId);
+          
+          if (destinationId) {
+            return { exists: true, destinationId };
+          }
+        }
+        
+        // Se chegamos aqui, a listagem funcionou mas não encontramos o destination
+        console.log(`Destination "${destinationName}" não encontrado na lista.`);
+        return { exists: false };
+      } catch (error) {
+        console.error(`Erro ao verificar destinations via ${endpoint}: ${error.message}`);
+        // Continuar tentando outros endpoints
+      }
+    }
+    
+    // Se nenhum endpoint funcionou, assumimos que não existe
+    console.log(`Não foi possível verificar se destination já existe. Assumindo que não existe.`);
+    return { exists: false };
+    
+  } catch (error) {
+    console.error(`Erro ao verificar destination existente: ${error.message}`);
+    return { exists: false };
+  }
+}
+
 // Função para configurar o Airbyte Destination para um novo tenant
 async function setupAirbyteDestination(schemaName) {
   console.log(`Configurando Airbyte Destination para o schema: ${schemaName}`);
@@ -101,6 +176,24 @@ async function setupAirbyteDestination(schemaName) {
     };
     
     console.log("Headers de autenticação configurados");
+    
+    // Primeiro, verificar se o destination já existe
+    const existingCheck = await checkExistingDestination(
+      apiUrl, 
+      headers, 
+      airbyteWorkspaceId, 
+      destinationName
+    );
+    
+    if (existingCheck.exists && existingCheck.destinationId) {
+      console.log(`Destination já existe com ID: ${existingCheck.destinationId}. Reutilizando.`);
+      return {
+        success: true,
+        destinationId: existingCheck.destinationId,
+        destinationName: destinationName,
+        message: "Destination existente reutilizado"
+      };
+    }
     
     // Configuração da conexão PostgreSQL para o Airbyte
     // Para o Airbyte OSS, o destinationDefinitionId para PostgreSQL
@@ -255,16 +348,37 @@ async function activateTenant(tenantId, supabaseClient) {
     
     console.log(`Tenant encontrado: ${tenant.schema_name}`);
     
-    // Configurar o Storage
-    const storageResult = await setupStorage(supabaseClient, tenant.schema_name);
-    if (!storageResult.success) {
-      throw new Error(`Falha ao configurar Storage: ${storageResult.error}`);
+    // Verificar se o tenant já está ativo
+    if (tenant.status === 'active') {
+      console.log(`Tenant ${tenant.schema_name} já está ativo, ignorando ativação`);
+      return {
+        success: true,
+        message: "Tenant já está ativo",
+        tenant: tenant.schema_name
+      };
     }
     
-    // Configurar o Airbyte Destination
-    const airbyteResult = await setupAirbyteDestination(tenant.schema_name);
-    if (!airbyteResult.success) {
-      throw new Error(`Falha ao configurar Airbyte: ${airbyteResult.error}`);
+    // Verificar se o tenant já tem configurações parciais
+    let storageResult = { success: true };
+    if (!tenant.storage_folder) {
+      // Configurar o Storage apenas se ainda não estiver configurado
+      storageResult = await setupStorage(supabaseClient, tenant.schema_name);
+      if (!storageResult.success) {
+        throw new Error(`Falha ao configurar Storage: ${storageResult.error}`);
+      }
+    } else {
+      console.log(`Storage já configurado: ${tenant.storage_folder}`);
+    }
+    
+    let airbyteResult = { success: true };
+    if (!tenant.airbyte_destination_id) {
+      // Configurar o Airbyte apenas se ainda não estiver configurado
+      airbyteResult = await setupAirbyteDestination(tenant.schema_name);
+      if (!airbyteResult.success) {
+        throw new Error(`Falha ao configurar Airbyte: ${airbyteResult.error}`);
+      }
+    } else {
+      console.log(`Airbyte destination já configurado: ${tenant.airbyte_destination_id}`);
     }
     
     // Atualizar o registro do tenant com os resultados
@@ -274,7 +388,7 @@ async function activateTenant(tenantId, supabaseClient) {
       error_message: null
     };
     
-    if (airbyteResult.success) {
+    if (airbyteResult.success && airbyteResult.destinationId) {
       updates.airbyte_destination_id = airbyteResult.destinationId;
     }
     

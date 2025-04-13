@@ -17,6 +17,7 @@ const ChatLayout = () => {
   const navigate = useNavigate();
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState("Erro ao configurar o ambiente. Tente novamente mais tarde.");
+  const [setupProgress, setSetupProgress] = useState(0);
 
   useEffect(() => {
     // Mostrar o diálogo de erro se o tenant tiver status de erro
@@ -29,6 +30,35 @@ const ChatLayout = () => {
       }
     }
   }, [tenant]);
+
+  // Efeito para simular progresso durante a criação
+  useEffect(() => {
+    let interval: number | undefined;
+    
+    if (tenant && tenant.status === 'creating') {
+      // Inicializar o progresso se necessário
+      if (setupProgress === 0) {
+        setSetupProgress(5); // Começa com 5%
+      }
+      
+      // Incrementar o progresso a cada 3 segundos até 90%
+      interval = window.setInterval(() => {
+        setSetupProgress(prev => {
+          // Avançar mais rápido no início, mais lento conforme se aproxima de 90%
+          const increment = prev < 30 ? 10 : prev < 60 ? 5 : 2;
+          const next = Math.min(prev + increment, 90);
+          return next;
+        });
+      }, 3000);
+    } else if (tenant && tenant.status === 'active') {
+      // Se ativo, ir para 100%
+      setSetupProgress(100);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [tenant, setupProgress]);
 
   const handleCloseErrorDialog = () => {
     setShowErrorDialog(false);
@@ -68,9 +98,18 @@ const ChatLayout = () => {
             className="h-12 w-12 animate-pulse rounded-[20px]" 
           />
         </div>
-        <Loader2 className="h-8 w-8 animate-spin text-sightx-purple" />
-        <p className="mt-4 text-muted-foreground">Configurando seu ambiente...</p>
-        <p className="text-sm text-muted-foreground">Isso pode levar alguns minutos.</p>
+        <Loader2 className="h-8 w-8 animate-spin text-sightx-purple mb-4" />
+        <p className="mt-2 text-muted-foreground">Configurando seu ambiente...</p>
+        <p className="text-sm text-muted-foreground mb-4">Isso pode levar alguns minutos.</p>
+        
+        {/* Barra de progresso */}
+        <div className="w-64 bg-gray-200 rounded-full h-2.5 mb-2">
+          <div 
+            className="bg-sightx-purple h-2.5 rounded-full transition-all duration-500 ease-out" 
+            style={{ width: `${setupProgress}%` }}
+          ></div>
+        </div>
+        <p className="text-xs text-muted-foreground">{setupProgress}% concluído</p>
       </div>
     );
   }

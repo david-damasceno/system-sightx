@@ -40,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [activationInProgress, setActivationInProgress] = useState(false);
   const { toast } = useToast();
 
   const fetchTenant = async (userId: string) => {
@@ -66,41 +67,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const activateTenant = async (tenantId: string) => {
+    // Evitar múltiplas chamadas simultâneas
+    if (activationInProgress) {
+      console.log("Ativação já em andamento, ignorando chamada duplicada");
+      return;
+    }
+
     try {
+      setActivationInProgress(true);
       console.log("Iniciando ativação do tenant:", tenantId);
       
       // Verificar status atual do tenant
       const { data: tenantData } = await supabase
         .from('tenants')
-        .select('status')
+        .select('status, error_message')
         .eq('id', tenantId)
         .single();
 
       if (tenantData && tenantData.status === 'active') {
         console.log("Tenant já está ativo");
+        setActivationInProgress(false);
         return;
       }
       
       console.log("Chamando função setup-tenant...");
       
       // Atualizar o status do tenant para 'creating' antes de chamar a função
-      const { error: updateError } = await supabase
-        .from('tenants')
-        .update({ 
-          status: 'creating', 
-          updated_at: new Date().toISOString(),
-          error_message: null
-        })
-        .eq('id', tenantId);
-        
-      if (updateError) {
-        console.error("Erro ao atualizar status do tenant para 'creating':", updateError);
+      try {
+        const { error: updateError } = await supabase
+          .from('tenants')
+          .update({ 
+            status: 'creating', 
+            updated_at: new Date().toISOString(),
+            error_message: null
+          })
+          .eq('id', tenantId);
+          
+        if (updateError) {
+          console.error("Erro ao atualizar status do tenant para 'creating':", updateError);
+          // Continuamos mesmo com erro no update
+        }
+      } catch (updateErr) {
+        console.error("Erro ao atualizar status para 'creating':", updateErr);
+        // Continuamos mesmo com erro
       }
 
+      // Adicionar um timeout para garantir que a função não fique travada
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout na ativação do tenant")), 30000)
+      );
+
       // Chamar a função Edge para configurar o tenant
-      const { data, error } = await supabase.functions.invoke('setup-tenant', {
+      const functionPromise = supabase.functions.invoke('setup-tenant', {
         body: { tenantId }
       });
+
+      // Usar Promise.race para implementar timeout
+      const { data, error } = await Promise.race([
+        functionPromise,
+        timeoutPromise
+      ]) as any;
 
       console.log("Resposta da função setup-tenant:", data, error);
 
@@ -124,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: error.message || "Erro ao configurar o ambiente.",
         });
         
+        setActivationInProgress(false);
         return;
       }
 
@@ -152,6 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             description: data.airbyte.error || "Erro ao configurar o Airbyte.",
           });
           
+          setActivationInProgress(false);
           return;
         }
         
@@ -205,6 +233,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Erro na configuração",
         description: error.message || "Erro ao configurar o ambiente.",
       });
+    } finally {
+      setActivationInProgress(false);
     }
   };
 
@@ -227,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const tenantData = await fetchTenant(session.user.id);
           
           // Ativar tenant se estiver em criação
-          if (tenantData && tenantData.status === 'creating') {
+          if (tenantData && tenantData.status === 'creating' && !activationInProgress) {
             console.log("Tenant em criação, ativando...");
             // Use setTimeout para evitar conflitos com o evento de autenticação
             setTimeout(() => {
@@ -257,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const tenantData = await fetchTenant(session.user.id);
         
         // Ativar tenant se estiver em criação
-        if (tenantData && tenantData.status === 'creating') {
+        if (tenantData && tenantData.status === 'creating' && !activationInProgress) {
           console.log("Tenant em criação, ativando...");
           // Use setTimeout para evitar conflitos com o carregamento inicial
           setTimeout(() => {
