@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Verificar status atual do tenant
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
-        .select('status, error_message')
+        .select('status')
         .eq('id', tenantId)
         .single();
 
