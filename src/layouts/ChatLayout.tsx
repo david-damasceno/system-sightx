@@ -28,9 +28,6 @@ const ChatLayout = () => {
       if (tenant.error_message) {
         setErrorMessage(tenant.error_message);
       }
-    } else {
-      // Fechar o diálogo se o status não for mais erro
-      setShowErrorDialog(false);
     }
   }, [tenant]);
 

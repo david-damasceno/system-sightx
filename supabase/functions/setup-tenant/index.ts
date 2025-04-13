@@ -67,59 +67,73 @@ async function checkExistingDestination(airbyteUrl, authHeaders, workspaceId, de
   console.log(`Verificando se destination "${destinationName}" já existe no Airbyte...`);
   
   try {
-    // Endpoint correto para listar destinations
-    const endpoint = `${airbyteUrl}/api/v1/destinations/list`;
+    // Lista de possíveis endpoints para obter destinations
+    const possibleEndpoints = [
+      `${airbyteUrl}/api/v1/destinations/list`,
+      `${airbyteUrl}/api/destinations/list`,
+      `${airbyteUrl}/destinations/list`
+    ];
     
-    console.log(`Tentando listar destinations via ${endpoint}`);
-    
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({ workspaceId }),
-    });
-    
-    if (!response.ok) {
-      console.log(`Endpoint ${endpoint} retornou status ${response.status} - ${response.statusText}`);
-      const errorText = await response.text();
-      console.error(`Erro detalhado: ${errorText}`);
-      return { exists: false, error: `Status ${response.status}: ${errorText}` };
-    }
-    
-    const data = await response.json();
-    console.log(`Resposta de listagem de destinations recebida, verificando por "${destinationName}"`);
-    
-    // Verificar formato da resposta
-    const destinations = data.destinations || data;
-    
-    if (!Array.isArray(destinations)) {
-      console.log(`Formato de resposta inesperado: ${JSON.stringify(data)}`);
-      return { exists: false };
-    }
-    
-    // Procurar pelo destination pelo nome
-    const existingDestination = destinations.find(d => 
-      d.name === destinationName || 
-      (d.destination && d.destination.name === destinationName)
-    );
-    
-    if (existingDestination) {
-      console.log(`Destination "${destinationName}" já existe!`);
-      // Extrair o ID do destination conforme o formato da resposta
-      const destinationId = existingDestination.destinationId || 
-                          existingDestination.id || 
-                          (existingDestination.destination && existingDestination.destination.destinationId);
-      
-      if (destinationId) {
-        return { exists: true, destinationId };
+    for (const endpoint of possibleEndpoints) {
+      try {
+        console.log(`Tentando listar destinations via ${endpoint}`);
+        
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({ workspaceId }),
+        });
+        
+        if (!response.ok) {
+          console.log(`Endpoint ${endpoint} retornou status ${response.status}, tentando próximo...`);
+          continue;
+        }
+        
+        const data = await response.json();
+        console.log(`Resposta de listagem de destinations recebida, verificando por "${destinationName}"`);
+        
+        // Verificar diferentes formatos de resposta
+        const destinations = data.destinations || data;
+        
+        if (!Array.isArray(destinations)) {
+          console.log(`Formato de resposta inesperado do endpoint ${endpoint}, tentando próximo...`);
+          continue;
+        }
+        
+        // Procurar pelo destination pelo nome
+        const existingDestination = destinations.find(d => 
+          d.name === destinationName || 
+          (d.destination && d.destination.name === destinationName)
+        );
+        
+        if (existingDestination) {
+          console.log(`Destination "${destinationName}" já existe!`);
+          // Extrair o ID do destination conforme o formato da resposta
+          const destinationId = existingDestination.destinationId || 
+                              existingDestination.id || 
+                              (existingDestination.destination && existingDestination.destination.destinationId);
+          
+          if (destinationId) {
+            return { exists: true, destinationId };
+          }
+        }
+        
+        // Se chegamos aqui, a listagem funcionou mas não encontramos o destination
+        console.log(`Destination "${destinationName}" não encontrado na lista.`);
+        return { exists: false };
+      } catch (error) {
+        console.error(`Erro ao verificar destinations via ${endpoint}: ${error.message}`);
+        // Continuar tentando outros endpoints
       }
     }
     
-    // Se chegamos aqui, a listagem funcionou mas não encontramos o destination
-    console.log(`Destination "${destinationName}" não encontrado na lista.`);
+    // Se nenhum endpoint funcionou, assumimos que não existe
+    console.log(`Não foi possível verificar se destination já existe. Assumindo que não existe.`);
     return { exists: false };
+    
   } catch (error) {
-    console.error(`Erro ao verificar destinations: ${error.message}`);
-    return { exists: false, error: error.message };
+    console.error(`Erro ao verificar destination existente: ${error.message}`);
+    return { exists: false };
   }
 }
 
@@ -163,27 +177,6 @@ async function setupAirbyteDestination(schemaName) {
     
     console.log("Headers de autenticação configurados");
     
-    // Testar conexão com o Airbyte
-    try {
-      const testEndpoint = `${apiUrl}/api/v1/health`;
-      console.log(`Testando conectividade com Airbyte em: ${testEndpoint}`);
-      
-      const testResponse = await fetch(testEndpoint, {
-        method: "GET",
-        headers: { "Accept": "application/json" }
-      });
-      
-      console.log(`Teste de saúde do Airbyte: ${testResponse.status} ${testResponse.statusText}`);
-      
-      if (!testResponse.ok) {
-        const testBody = await testResponse.text();
-        console.warn(`Aviso no teste de saúde do Airbyte: ${testBody}`);
-      }
-    } catch (healthError) {
-      console.warn(`Aviso ao testar conectividade com Airbyte: ${healthError.message}`);
-      // Continuamos mesmo com aviso no health check
-    }
-    
     // Primeiro, verificar se o destination já existe
     const existingCheck = await checkExistingDestination(
       apiUrl, 
@@ -191,10 +184,6 @@ async function setupAirbyteDestination(schemaName) {
       airbyteWorkspaceId, 
       destinationName
     );
-    
-    if (existingCheck.error) {
-      console.error(`Erro ao verificar destination existente: ${existingCheck.error}`);
-    }
     
     if (existingCheck.exists && existingCheck.destinationId) {
       console.log(`Destination já existe com ID: ${existingCheck.destinationId}. Reutilizando.`);
@@ -218,7 +207,7 @@ async function setupAirbyteDestination(schemaName) {
       }
     }
     
-    // Payload para criar o destination
+    // Payload para criar o destination - formato específico para Airbyte OSS
     const payload = {
       workspaceId: airbyteWorkspaceId,
       name: destinationName,
@@ -238,43 +227,83 @@ async function setupAirbyteDestination(schemaName) {
     
     console.log(`Payload do destination: ${JSON.stringify(payload, null, 2)}`);
     
-    // Endpoint correto para criar destinations
-    const createEndpoint = `${apiUrl}/api/v1/destinations/create`;
-    console.log(`Criando destination no endpoint: ${createEndpoint}`);
-    
-    // Fazer a chamada para criar o destination
+    // Testar conectividade com Airbyte antes de fazer a chamada principal
     try {
-      const response = await fetch(createEndpoint, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(payload),
+      const healthCheckUrl = `${apiUrl}/health`;
+      console.log(`Testando conectividade com Airbyte em: ${healthCheckUrl}`);
+      
+      const testResponse = await fetch(healthCheckUrl, {
+        method: "GET",
+        headers: { "Accept": "application/json" }
       });
       
-      console.log(`Resposta do endpoint ${createEndpoint}: ${response.status} ${response.statusText}`);
+      console.log(`Teste de saúde do Airbyte: ${testResponse.status} ${testResponse.statusText}`);
       
-      const responseBody = await response.text();
-      console.log(`Corpo da resposta: ${responseBody}`);
-      
-      if (!response.ok) {
-        throw new Error(`Falha ao criar destination: ${response.status} - ${responseBody}`);
+      if (!testResponse.ok) {
+        const testBody = await testResponse.text();
+        console.error(`Erro no teste de saúde do Airbyte: ${testBody}`);
       }
+    } catch (healthError) {
+      console.error(`Erro ao testar conectividade com Airbyte: ${healthError.message}`);
+      // Continuamos mesmo com erro no health check
+    }
+    
+    // Lista de possíveis endpoints para diferentes versões/configurações do Airbyte OSS
+    const possibleEndpoints = [
+      `${apiUrl}/api/v1/destinations/create`,
+      `${apiUrl}/api/destinations/create`,
+      `${apiUrl}/destinations/create`,
+      `${apiUrl}/api/v1/destinations`
+    ];
+    
+    let success = false;
+    let result = null;
+    let lastError = null;
+    
+    // Tentar cada endpoint possível
+    for (const endpoint of possibleEndpoints) {
+      if (success) break;
       
-      let responseData;
+      console.log(`Tentando criar destination no endpoint: ${endpoint}`);
+      
       try {
-        responseData = JSON.parse(responseBody);
-      } catch (parseError) {
-        console.error(`Erro ao analisar resposta JSON: ${parseError.message}`);
-        throw new Error(`Resposta inválida do Airbyte: ${responseBody}`);
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(payload),
+        });
+        
+        console.log(`Resposta de ${endpoint}: ${response.status} ${response.statusText}`);
+        
+        if (response.ok) {
+          const responseData = await response.json();
+          console.log(`Destination criado com sucesso via ${endpoint}: ${JSON.stringify(responseData, null, 2)}`);
+          success = true;
+          result = responseData;
+          break;
+        } else {
+          const errorText = await response.text();
+          console.error(`Erro no endpoint ${endpoint} (${response.status}): ${errorText}`);
+          
+          try {
+            lastError = JSON.parse(errorText);
+          } catch (e) {
+            lastError = { message: errorText };
+          }
+        }
+      } catch (fetchError) {
+        console.error(`Erro ao chamar ${endpoint}: ${fetchError.message}`);
+        lastError = { message: fetchError.message };
       }
-      
-      console.log(`Destination criado com sucesso: ${JSON.stringify(responseData, null, 2)}`);
-      
-      // Extrair o ID do destination
-      const destinationId = responseData.destinationId || responseData.id || 
-                          (responseData.destination && responseData.destination.destinationId);
+    }
+    
+    // Verificar se algum endpoint teve sucesso
+    if (success && result) {
+      // Extrair o ID do destination de acordo com a estrutura de resposta
+      const destinationId = result.destinationId || result.id || (result.destination && result.destination.destinationId);
       
       if (!destinationId) {
-        throw new Error("ID do destination não encontrado na resposta");
+        throw new Error("ID do destination não encontrado na resposta, embora a operação tenha sido bem-sucedida");
       }
       
       return {
@@ -282,9 +311,13 @@ async function setupAirbyteDestination(schemaName) {
         destinationId: destinationId,
         destinationName: destinationName
       };
-    } catch (fetchError) {
-      console.error(`Erro ao criar destination: ${fetchError.message}`);
-      throw fetchError;
+    } else {
+      // Se nenhum endpoint teve sucesso, lançar o último erro
+      const errorMsg = lastError ? 
+        (typeof lastError === 'object' ? JSON.stringify(lastError) : lastError) : 
+        "Todos os endpoints falharam, sem detalhes adicionais";
+      
+      throw new Error(`Falha ao criar destination. ${errorMsg}`);
     }
   } catch (error) {
     console.error(`Erro ao configurar Airbyte: ${error.message}`);
