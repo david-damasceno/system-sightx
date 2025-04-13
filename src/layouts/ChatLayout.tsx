@@ -31,7 +31,7 @@ const ChatLayout = () => {
     }
   }, [tenant]);
 
-  // Efeito para simular progresso durante a criação
+  // Efeito para simular progresso durante a criação (apenas visual)
   useEffect(() => {
     let interval: number | undefined;
     
@@ -41,15 +41,15 @@ const ChatLayout = () => {
         setSetupProgress(5); // Começa com 5%
       }
       
-      // Incrementar o progresso a cada 3 segundos até 90%
+      // Incrementar o progresso a cada 2 segundos até 95%
       interval = window.setInterval(() => {
         setSetupProgress(prev => {
-          // Avançar mais rápido no início, mais lento conforme se aproxima de 90%
+          // Avançar mais rápido no início, mais lento conforme se aproxima de 95%
           const increment = prev < 30 ? 10 : prev < 60 ? 5 : 2;
-          const next = Math.min(prev + increment, 90);
+          const next = Math.min(prev + increment, 95);
           return next;
         });
-      }, 3000);
+      }, 2000);
     } else if (tenant && tenant.status === 'active') {
       // Se ativo, ir para 100%
       setSetupProgress(100);
@@ -87,8 +87,9 @@ const ChatLayout = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Mostrar tela de carregamento se o tenant estiver sendo configurado
-  if (tenant && tenant.status === 'creating') {
+  // Mostrar tela de carregamento apenas durante a criação inicial do tenant
+  // Uma vez que o tenant existe mas está 'creating', vamos permitir o acesso
+  if (tenant && tenant.status === 'creating' && !tenant.storage_folder) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="h-20 w-20 mb-8 rounded-[20px] flex items-center justify-center bg-sightx-purple/10">
@@ -100,7 +101,7 @@ const ChatLayout = () => {
         </div>
         <Loader2 className="h-8 w-8 animate-spin text-sightx-purple mb-4" />
         <p className="mt-2 text-muted-foreground">Configurando seu ambiente...</p>
-        <p className="text-sm text-muted-foreground mb-4">Isso pode levar alguns minutos.</p>
+        <p className="text-sm text-muted-foreground mb-4">Aguarde um momento.</p>
         
         {/* Barra de progresso */}
         <div className="w-64 bg-gray-200 rounded-full h-2.5 mb-2">
