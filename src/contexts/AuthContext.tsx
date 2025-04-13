@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "../types";
 import { useNavigate } from "react-router-dom";
@@ -78,11 +77,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("Iniciando ativação do tenant:", tenantId);
       
       // Verificar status atual do tenant
-      const { data: tenantData } = await supabase
+      const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
         .select('status, error_message')
         .eq('id', tenantId)
         .single();
+
+      // Correção aqui: verificar primeiro se houve erro na consulta
+      if (tenantError) {
+        console.error("Erro ao verificar o status do tenant:", tenantError);
+        setActivationInProgress(false);
+        return;
+      }
 
       if (tenantData && tenantData.status === 'active') {
         console.log("Tenant já está ativo");
