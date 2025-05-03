@@ -9,15 +9,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
 const ChatLayout = () => {
-  const { isAuthenticated, isLoading, tenant } = useAuth();
+  const { isAuthenticated, isLoading, tenant, user } = useAuth();
   const { mode } = useMode();
   const location = useLocation();
   const navigate = useNavigate();
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState("Erro ao configurar o ambiente. Tente novamente mais tarde.");
   const [setupProgress, setSetupProgress] = useState(0);
+  const [timeoutCount, setTimeoutCount] = useState(0);
 
   useEffect(() => {
     // Mostrar o diálogo de erro se o tenant tiver status de erro
@@ -47,6 +49,12 @@ const ChatLayout = () => {
           // Avançar mais rápido no início, mais lento conforme se aproxima de 90%
           const increment = prev < 30 ? 10 : prev < 60 ? 5 : 2;
           const next = Math.min(prev + increment, 90);
+          
+          // Se estamos demorando muito, aumentar o contador de timeout
+          if (prev > 80) {
+            setTimeoutCount(prevCount => prevCount + 1);
+          }
+          
           return next;
         });
       }, 3000);
@@ -60,12 +68,38 @@ const ChatLayout = () => {
     };
   }, [tenant, setupProgress]);
 
+  // Efeito para detectar se o ambiente está demorando muito para ser configurado
+  useEffect(() => {
+    // Se o contador de timeout chegar a 5 (aproximadamente 15 segundos em 80%+)
+    if (timeoutCount > 5 && tenant && tenant.status === 'creating') {
+      // Mostrar opção ao usuário para continuar mesmo sem configuração completa
+      setErrorMessage("A configuração do ambiente está demorando mais que o esperado. Deseja continuar mesmo assim?");
+      setShowErrorDialog(true);
+    }
+  }, [timeoutCount, tenant]);
+
   const handleCloseErrorDialog = () => {
     setShowErrorDialog(false);
-    navigate("/");
+    // Em caso de timeout, permitir usar o app mesmo com configuração incompleta
+    if (timeoutCount > 5 && tenant && tenant.status === 'creating') {
+      // Não redirecionar, apenas fechar o diálogo
+    } else {
+      // Em caso de erro real, redirecionar para a página inicial
+      navigate("/");
+    }
   };
 
-  // Show loading state
+  const handleContinueAnyway = () => {
+    setShowErrorDialog(false);
+    // Podemos adicionar lógica adicional aqui se necessário
+  };
+
+  // Se não está autenticado, redirecionar para o login
+  if (!isLoading && !isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Show loading state com timeout
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -82,13 +116,9 @@ const ChatLayout = () => {
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
   // Mostrar tela de carregamento se o tenant estiver sendo configurado
-  if (tenant && tenant.status === 'creating') {
+  // com opção para continuar após um certo tempo
+  if (tenant && tenant.status === 'creating' && !showErrorDialog) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="h-20 w-20 mb-8 rounded-[20px] flex items-center justify-center bg-sightx-purple/10">
@@ -110,23 +140,45 @@ const ChatLayout = () => {
           ></div>
         </div>
         <p className="text-xs text-muted-foreground">{setupProgress}% concluído</p>
+        
+        {/* Botão para continuar sem esperar a configuração completa */}
+        {timeoutCount > 5 && (
+          <Button 
+            variant="outline"
+            className="mt-6"
+            onClick={() => {
+              setShowErrorDialog(true);
+            }}
+          >
+            Continuar mesmo assim
+          </Button>
+        )}
       </div>
     );
   }
 
-  // Diálogo de erro para problemas na configuração
+  // Diálogo de erro para problemas na configuração ou opção de continuar
   return (
     <>
       <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-destructive">Erro na configuração do ambiente</DialogTitle>
+            <DialogTitle className={timeoutCount > 5 ? "" : "text-destructive"}>
+              {timeoutCount > 5 ? "Configuração em andamento" : "Erro na configuração do ambiente"}
+            </DialogTitle>
             <DialogDescription>
               {errorMessage}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button onClick={handleCloseErrorDialog}>OK</Button>
+          <DialogFooter className="flex justify-between sm:justify-between">
+            {timeoutCount > 5 && tenant?.status === 'creating' ? (
+              <>
+                <Button variant="outline" onClick={handleCloseErrorDialog}>Aguardar</Button>
+                <Button onClick={handleContinueAnyway}>Continuar mesmo assim</Button>
+              </>
+            ) : (
+              <Button onClick={handleCloseErrorDialog}>OK</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
