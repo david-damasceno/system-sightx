@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
 import { useMode } from "../contexts/ModeContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, schemaTable } from "@/integrations/supabase/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
@@ -62,8 +61,7 @@ const useChat = (existingChatId?: string) => {
       
       // Usando o esquema específico do usuário para carregar as sessões
       const schema = tenant.schema_name;
-      const { data: sessions, error } = await supabase
-        .from(`${schema}.chat_sessions`)
+      const { data: sessions, error } = await schemaTable(schema, 'chat_sessions')
         .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
@@ -75,8 +73,7 @@ const useChat = (existingChatId?: string) => {
         const formattedSessions: ChatSession[] = await Promise.all(
           sessions.map(async (session: any) => {
             // Carregar mensagens para cada sessão
-            const { data: messageData, error: messagesError } = await supabase
-              .from(`${schema}.chat_messages`)
+            const { data: messageData, error: messagesError } = await schemaTable(schema, 'chat_messages')
               .select('*')
               .eq('session_id', session.id)
               .order('timestamp', { ascending: true });
@@ -136,8 +133,7 @@ const useChat = (existingChatId?: string) => {
       const schema = tenant.schema_name;
       
       // Salvar sessão
-      const { error: sessionError } = await supabase
-        .from(`${schema}.chat_sessions`)
+      const { error: sessionError } = await schemaTable(schema, 'chat_sessions')
         .insert({
           id: session.id,
           title: session.title,
@@ -160,8 +156,7 @@ const useChat = (existingChatId?: string) => {
           attachment: msg.attachment
         }));
         
-        const { error: messagesError } = await supabase
-          .from(`${schema}.chat_messages`)
+        const { error: messagesError } = await schemaTable(schema, 'chat_messages')
           .insert(messagesToInsert);
           
         if (messagesError) throw messagesError;
@@ -180,8 +175,7 @@ const useChat = (existingChatId?: string) => {
       const schema = tenant.schema_name;
       
       // Atualizar sessão
-      const { error: sessionError } = await supabase
-        .from(`${schema}.chat_sessions`)
+      const { error: sessionError } = await schemaTable(schema, 'chat_sessions')
         .update({
           title: session.title,
           updated_at: new Date().toISOString()
@@ -202,8 +196,7 @@ const useChat = (existingChatId?: string) => {
           attachment: msg.attachment
         }));
         
-        const { error: messagesError } = await supabase
-          .from(`${schema}.chat_messages`)
+        const { error: messagesError } = await schemaTable(schema, 'chat_messages')
           .insert(messagesToInsert);
           
         if (messagesError) throw messagesError;
@@ -422,16 +415,14 @@ const useChat = (existingChatId?: string) => {
       const schema = tenant.schema_name;
       
       // Excluir mensagens primeiro (devido à restrição de chave estrangeira)
-      const { error: messagesError } = await supabase
-        .from(`${schema}.chat_messages`)
+      const { error: messagesError } = await schemaTable(schema, 'chat_messages')
         .delete()
         .eq('session_id', chatId);
         
       if (messagesError) throw messagesError;
       
       // Excluir a sessão
-      const { error: sessionError } = await supabase
-        .from(`${schema}.chat_sessions`)
+      const { error: sessionError } = await schemaTable(schema, 'chat_sessions')
         .delete()
         .eq('id', chatId);
         
@@ -460,8 +451,7 @@ const useChat = (existingChatId?: string) => {
       const schema = tenant.schema_name;
       
       // Excluir todas as mensagens do usuário
-      const { error: messagesError } = await supabase
-        .from(`${schema}.chat_messages`)
+      const { error: messagesError } = await schemaTable(schema, 'chat_messages')
         .delete()
         .in(
           'session_id', 
@@ -471,8 +461,7 @@ const useChat = (existingChatId?: string) => {
       if (messagesError) throw messagesError;
       
       // Excluir todas as sessões do usuário
-      const { error: sessionsError } = await supabase
-        .from(`${schema}.chat_sessions`)
+      const { error: sessionsError } = await schemaTable(schema, 'chat_sessions')
         .delete()
         .eq('user_id', user.id);
         
