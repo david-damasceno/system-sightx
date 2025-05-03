@@ -40,7 +40,7 @@ interface AiTypingState {
 
 const useChat = (existingChatId?: string) => {
   const { mode } = useMode();
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
@@ -53,15 +53,17 @@ const useChat = (existingChatId?: string) => {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Função para carregar as mensagens do Supabase
+  // Função para carregar as mensagens do esquema do usuário
   const loadChatSessions = async () => {
-    if (!user) return;
+    if (!user || !tenant || !tenant.schema_name) return;
     
     try {
       setIsLoading(true);
       
+      // Usando o esquema específico do usuário para carregar as sessões
+      const schema = tenant.schema_name;
       const { data: sessions, error } = await supabase
-        .from('chat_sessions')
+        .from(`${schema}.chat_sessions`)
         .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
@@ -71,10 +73,10 @@ const useChat = (existingChatId?: string) => {
       if (sessions) {
         // Converter os dados para o formato esperado
         const formattedSessions: ChatSession[] = await Promise.all(
-          sessions.map(async (session: ChatSessionsRow) => {
+          sessions.map(async (session: any) => {
             // Carregar mensagens para cada sessão
             const { data: messageData, error: messagesError } = await supabase
-              .from('chat_messages')
+              .from(`${schema}.chat_messages`)
               .select('*')
               .eq('session_id', session.id)
               .order('timestamp', { ascending: true });
@@ -82,7 +84,7 @@ const useChat = (existingChatId?: string) => {
             if (messagesError) throw messagesError;
             
             // Formatar mensagens
-            const formattedMessages: Message[] = messageData?.map((msg: ChatMessagesRow) => ({
+            const formattedMessages: Message[] = messageData?.map((msg: any) => ({
               id: msg.id,
               content: msg.content,
               senderId: msg.sender_id,
@@ -90,9 +92,9 @@ const useChat = (existingChatId?: string) => {
               timestamp: new Date(msg.timestamp),
               ...(msg.attachment && {
                 attachment: {
-                  name: (msg.attachment as any).name,
-                  type: (msg.attachment as any).type,
-                  url: (msg.attachment as any).url
+                  name: msg.attachment.name,
+                  type: msg.attachment.type,
+                  url: msg.attachment.url
                 }
               })
             })) || [];
@@ -126,14 +128,16 @@ const useChat = (existingChatId?: string) => {
     }
   };
 
-  // Salvar nova sessão no Supabase
+  // Salvar nova sessão no esquema do usuário
   const saveNewSession = async (session: ChatSession) => {
-    if (!user) return;
+    if (!user || !tenant || !tenant.schema_name) return;
     
     try {
+      const schema = tenant.schema_name;
+      
       // Salvar sessão
       const { error: sessionError } = await supabase
-        .from('chat_sessions')
+        .from(`${schema}.chat_sessions`)
         .insert({
           id: session.id,
           title: session.title,
@@ -157,7 +161,7 @@ const useChat = (existingChatId?: string) => {
         }));
         
         const { error: messagesError } = await supabase
-          .from('chat_messages')
+          .from(`${schema}.chat_messages`)
           .insert(messagesToInsert);
           
         if (messagesError) throw messagesError;
@@ -170,12 +174,14 @@ const useChat = (existingChatId?: string) => {
 
   // Atualizar sessão existente
   const updateSession = async (session: ChatSession, newMessages: Message[]) => {
-    if (!user) return;
+    if (!user || !tenant || !tenant.schema_name) return;
     
     try {
+      const schema = tenant.schema_name;
+      
       // Atualizar sessão
       const { error: sessionError } = await supabase
-        .from('chat_sessions')
+        .from(`${schema}.chat_sessions`)
         .update({
           title: session.title,
           updated_at: new Date().toISOString()
@@ -197,7 +203,7 @@ const useChat = (existingChatId?: string) => {
         }));
         
         const { error: messagesError } = await supabase
-          .from('chat_messages')
+          .from(`${schema}.chat_messages`)
           .insert(messagesToInsert);
           
         if (messagesError) throw messagesError;
@@ -210,7 +216,7 @@ const useChat = (existingChatId?: string) => {
 
   // Carregar histórico de chat quando o usuário ou modo mudar
   useEffect(() => {
-    if (user) {
+    if (user && tenant && tenant.status === 'active') {
       loadChatSessions();
     } else {
       setChatHistory([]);
@@ -219,7 +225,7 @@ const useChat = (existingChatId?: string) => {
         setMessages([]);
       }
     }
-  }, [user, mode]);
+  }, [user, mode, tenant]);
 
   // Efeito de digitação do AI
   useEffect(() => {
@@ -258,7 +264,7 @@ const useChat = (existingChatId?: string) => {
   }, [aiTyping.isTyping]);
 
   const sendMessage = async (content: string, file?: File) => {
-    if (!user) return;
+    if (!user || !tenant || !tenant.schema_name) return;
 
     // Criar mensagem do usuário com anexo opcional
     const userMessage: Message = {
@@ -311,7 +317,7 @@ const useChat = (existingChatId?: string) => {
       // Adicionar ao histórico local
       setChatHistory(prev => [currentSession!, ...prev]);
       
-      // Salvar no Supabase
+      // Salvar no esquema do usuário
       saveNewSession(currentSession);
     } else {
       // Atualizar mensagens na sessão existente
@@ -390,7 +396,7 @@ const useChat = (existingChatId?: string) => {
               )
             );
             
-            // Salvar no Supabase
+            // Salvar no esquema do usuário
             if (!needNewSession) {
               updateSession(currentSession, newMessages);
             }
@@ -410,12 +416,14 @@ const useChat = (existingChatId?: string) => {
   };
 
   const deleteChat = async (chatId: string) => {
-    if (!user) return;
+    if (!user || !tenant || !tenant.schema_name) return;
     
     try {
+      const schema = tenant.schema_name;
+      
       // Excluir mensagens primeiro (devido à restrição de chave estrangeira)
       const { error: messagesError } = await supabase
-        .from('chat_messages')
+        .from(`${schema}.chat_messages`)
         .delete()
         .eq('session_id', chatId);
         
@@ -423,7 +431,7 @@ const useChat = (existingChatId?: string) => {
       
       // Excluir a sessão
       const { error: sessionError } = await supabase
-        .from('chat_sessions')
+        .from(`${schema}.chat_sessions`)
         .delete()
         .eq('id', chatId);
         
@@ -446,12 +454,14 @@ const useChat = (existingChatId?: string) => {
   };
 
   const clearAllChats = async () => {
-    if (!user) return;
+    if (!user || !tenant || !tenant.schema_name) return;
     
     try {
+      const schema = tenant.schema_name;
+      
       // Excluir todas as mensagens do usuário
       const { error: messagesError } = await supabase
-        .from('chat_messages')
+        .from(`${schema}.chat_messages`)
         .delete()
         .in(
           'session_id', 
@@ -462,7 +472,7 @@ const useChat = (existingChatId?: string) => {
       
       // Excluir todas as sessões do usuário
       const { error: sessionsError } = await supabase
-        .from('chat_sessions')
+        .from(`${schema}.chat_sessions`)
         .delete()
         .eq('user_id', user.id);
         

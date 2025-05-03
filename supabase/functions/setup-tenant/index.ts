@@ -325,6 +325,30 @@ async function setupAirbyteDestination(schemaName) {
   }
 }
 
+// Função para criar as tabelas de chat no esquema do tenant
+async function setupSchemaTables(supabaseClient, schemaName) {
+  console.log(`Configurando tabelas no schema: ${schemaName}`);
+  
+  try {
+    // Verificar se o esquema existe
+    const { error: schemaCheckError } = await supabaseClient.rpc(
+      'apply_tenant_tables',
+      { t_record: { schema_name: schemaName } }
+    );
+    
+    if (schemaCheckError) {
+      console.error(`Erro ao criar tabelas para ${schemaName}: ${schemaCheckError.message}`);
+      return { success: false, error: schemaCheckError.message };
+    }
+    
+    console.log(`Tabelas configuradas com sucesso para o schema ${schemaName}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Erro ao configurar tabelas para ${schemaName}: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
 // Função principal de ativação do tenant
 async function activateTenant(tenantId, supabaseClient) {
   console.log(`Ativando tenant ID: ${tenantId}`);
@@ -381,6 +405,12 @@ async function activateTenant(tenantId, supabaseClient) {
       console.log(`Airbyte destination já configurado: ${tenant.airbyte_destination_id}`);
     }
     
+    // Configurar tabelas no esquema do tenant
+    const tablesResult = await setupSchemaTables(supabaseClient, tenant.schema_name);
+    if (!tablesResult.success) {
+      throw new Error(`Falha ao configurar tabelas no esquema: ${tablesResult.error}`);
+    }
+    
     // Atualizar o registro do tenant com os resultados
     const updates = {
       status: 'active',
@@ -406,7 +436,8 @@ async function activateTenant(tenantId, supabaseClient) {
       success: true,
       tenant: tenant.schema_name,
       storage: storageResult,
-      airbyte: airbyteResult
+      airbyte: airbyteResult,
+      tables: tablesResult
     };
   } catch (error) {
     console.error(`Erro ao ativar tenant: ${error.message}`);
