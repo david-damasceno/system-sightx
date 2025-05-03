@@ -3,11 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import AuthLayout from "./layouts/AuthLayout";
 import ChatLayout from "./layouts/ChatLayout";
 import Login from "./pages/Login";
+import Index from "./pages/Index";
 import ChatWindow from "./pages/ChatWindow";
 import ChatHistory from "./pages/ChatHistory";
 import Profile from "./pages/Profile";
@@ -35,7 +36,7 @@ const App = () => (
 
               {/* App Routes */}
               <Route element={<ChatLayout />}>
-                <Route path="/" element={<Navigate to="/chat" replace />} />
+                <Route path="/" element={<Index />} />
                 <Route path="/chat" element={<ChatWindow />} />
                 <Route path="/chat/:id" element={<ChatWindow />} />
                 <Route path="/history" element={<ChatHistory />} />

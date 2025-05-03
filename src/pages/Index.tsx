@@ -5,10 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import TenantInfo from "@/components/TenantInfo";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
-  const { user, tenant } = useAuth();
+  const { user } = useAuth();
 
   return (
     <div className="container max-w-6xl mx-auto py-8 px-4 md:px-6">

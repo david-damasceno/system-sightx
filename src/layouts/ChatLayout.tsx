@@ -2,7 +2,6 @@
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Sidebar from "../components/Sidebar";
-import { Loader2 } from "lucide-react";
 import { useMode } from "../contexts/ModeContext";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,6 +19,7 @@ const ChatLayout = () => {
   const [errorMessage, setErrorMessage] = useState("Erro ao configurar o ambiente. Tente novamente mais tarde.");
   const [setupProgress, setSetupProgress] = useState(0);
   const [timeoutCount, setTimeoutCount] = useState(0);
+  const [showSetupProgress, setShowSetupProgress] = useState(false);
 
   useEffect(() => {
     // Mostrar o diálogo de erro se o tenant tiver status de erro
@@ -80,13 +80,7 @@ const ChatLayout = () => {
 
   const handleCloseErrorDialog = () => {
     setShowErrorDialog(false);
-    // Em caso de timeout, permitir usar o app mesmo com configuração incompleta
-    if (timeoutCount > 5 && tenant && tenant.status === 'creating') {
-      // Não redirecionar, apenas fechar o diálogo
-    } else {
-      // Em caso de erro real, redirecionar para a página inicial
-      navigate("/");
-    }
+    // Não redirecionar, apenas fechar o diálogo
   };
 
   const handleContinueAnyway = () => {
@@ -94,70 +88,16 @@ const ChatLayout = () => {
     // Podemos adicionar lógica adicional aqui se necessário
   };
 
+  const toggleSetupProgress = () => {
+    setShowSetupProgress(!showSetupProgress);
+  };
+
   // Se não está autenticado, redirecionar para o login
   if (!isLoading && !isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Show loading state com timeout
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="h-20 w-20 mb-8 rounded-[20px] flex items-center justify-center bg-sightx-purple/10">
-          <img 
-            src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-            alt="SightX Logo" 
-            className="h-12 w-12 animate-pulse rounded-[20px]" 
-          />
-        </div>
-        <Loader2 className="h-8 w-8 animate-spin text-sightx-purple" />
-        <p className="mt-4 text-muted-foreground">Carregando SightX...</p>
-      </div>
-    );
-  }
-
-  // Mostrar tela de carregamento se o tenant estiver sendo configurado
-  // com opção para continuar após um certo tempo
-  if (tenant && tenant.status === 'creating' && !showErrorDialog) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="h-20 w-20 mb-8 rounded-[20px] flex items-center justify-center bg-sightx-purple/10">
-          <img 
-            src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-            alt="SightX Logo" 
-            className="h-12 w-12 animate-pulse rounded-[20px]" 
-          />
-        </div>
-        <Loader2 className="h-8 w-8 animate-spin text-sightx-purple mb-4" />
-        <p className="mt-2 text-muted-foreground">Configurando seu ambiente...</p>
-        <p className="text-sm text-muted-foreground mb-4">Isso pode levar alguns minutos.</p>
-        
-        {/* Barra de progresso */}
-        <div className="w-64 bg-gray-200 rounded-full h-2.5 mb-2">
-          <div 
-            className="bg-sightx-purple h-2.5 rounded-full transition-all duration-500 ease-out" 
-            style={{ width: `${setupProgress}%` }}
-          ></div>
-        </div>
-        <p className="text-xs text-muted-foreground">{setupProgress}% concluído</p>
-        
-        {/* Botão para continuar sem esperar a configuração completa */}
-        {timeoutCount > 5 && (
-          <Button 
-            variant="outline"
-            className="mt-6"
-            onClick={() => {
-              setShowErrorDialog(true);
-            }}
-          >
-            Continuar mesmo assim
-          </Button>
-        )}
-      </div>
-    );
-  }
-
-  // Diálogo de erro para problemas na configuração ou opção de continuar
+  // Remover completamente a tela de carregamento e mostrar diretamente a interface
   return (
     <>
       <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
@@ -186,6 +126,34 @@ const ChatLayout = () => {
       <div className="h-screen flex overflow-hidden bg-muted/30">
         <Sidebar />
         <main className="flex-1 overflow-auto">
+          {/* Barra de progresso opcional que pode ser mostrada na parte superior */}
+          {tenant && tenant.status === 'creating' && showSetupProgress && (
+            <div className="bg-sightx-purple/5 p-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-muted-foreground">Configurando ambiente: {setupProgress}%</span>
+                <Button variant="ghost" size="sm" className="h-6 px-2" onClick={toggleSetupProgress}>
+                  Esconder
+                </Button>
+              </div>
+              <Progress value={setupProgress} className="h-1" />
+            </div>
+          )}
+          
+          {/* Mostrar botão para exibir progresso se estiver configurando e não estiver visível */}
+          {tenant && tenant.status === 'creating' && !showSetupProgress && (
+            <div className="absolute top-4 right-4 z-10">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-background/80 backdrop-blur-sm" 
+                onClick={toggleSetupProgress}
+              >
+                Ver progresso da configuração
+              </Button>
+            </div>
+          )}
+          
+          {/* Conteúdo principal sempre visível */}
           <Outlet />
         </main>
       </div>
