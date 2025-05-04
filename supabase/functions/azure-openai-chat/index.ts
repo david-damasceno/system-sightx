@@ -25,6 +25,7 @@ serve(async (req) => {
   try {
     // Verificar se a chave da API está configurada
     if (!AZURE_OPENAI_API_KEY) {
+      console.error("Erro: AZURE_OPENAI_API_KEY não está configurada");
       return new Response(
         JSON.stringify({ error: "A chave da API do Azure OpenAI não está configurada" }),
         {
@@ -36,9 +37,13 @@ serve(async (req) => {
 
     // Extrair dados da solicitação
     const requestData = await req.json();
-    const { messages, userMode, stream = false } = requestData;
+    const { messages, userMode, tenantId, stream = false } = requestData;
+
+    // Log para debugar multi-tenant
+    console.log(`Recebendo requisição para tenant: ${tenantId || 'default'}, modo: ${userMode}`);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error("Erro: Formato de mensagens inválido", { messages });
       return new Response(
         JSON.stringify({ error: "Formato de mensagens inválido" }),
         {
@@ -68,6 +73,7 @@ serve(async (req) => {
       model: AZURE_OPENAI_MODEL,
       messageCount: formattedMessages.length,
       stream: stream,
+      tenantId: tenantId || 'default'
     });
 
     // Configurar a solicitação para a API do Azure OpenAI
@@ -149,6 +155,7 @@ serve(async (req) => {
       console.log("Resposta da Azure OpenAI recebida:", {
         status: openaiResponse.status,
         hasChoices: data.choices && data.choices.length > 0,
+        tenantId: tenantId || 'default'
       });
 
       if (!data.choices || data.choices.length === 0) {

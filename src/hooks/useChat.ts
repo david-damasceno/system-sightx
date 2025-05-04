@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
@@ -5,28 +6,6 @@ import { useMode } from "../contexts/ModeContext";
 import { supabase, schemaTable } from "@/integrations/supabase/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
-import { Database } from "@/integrations/supabase/types";
-
-// Fallback para respostas simuladas quando o Azure não estiver disponível
-const mockResponses = [
-  "Olá! Como posso ajudar você hoje?",
-  "Estou processando sua pergunta. Um momento, por favor...",
-  "Isso é uma ótima pergunta. Deixe-me explicar...",
-  "Posso ajudar com vários tópicos. Sinta-se à vontade para perguntar sobre o que precisar.",
-  "Entendi sua questão. Aqui está o que posso dizer sobre isso...",
-  "Essa é uma área interessante para explorarmos. Vamos conversar mais sobre isso.",
-  "Claro que posso ajudar com isso! Aqui estão algumas informações relevantes...",
-];
-
-const businessResponses = [
-  "Olá! Como posso assistir sua empresa hoje?",
-  "Estou analisando sua solicitação comercial. Um momento, por favor...",
-  "Essa é uma questão corporativa importante. Deixe-me elaborar...",
-  "Posso auxiliar com diversos tópicos empresariais. Qual setor de negócios você precisa de informações?",
-  "Compreendi seu questionamento comercial. Aqui estão os dados relevantes para sua empresa...",
-  "Este é um segmento estratégico para seu negócio. Vamos explorar as possibilidades...",
-  "Certamente posso ajudar com esta demanda corporativa! Aqui estão algumas análises de mercado...",
-];
 
 interface AiTypingState {
   isTyping: boolean;
@@ -48,7 +27,6 @@ const useChat = (existingChatId?: string) => {
     fullMessage: "",
     progress: 0
   });
-  const [useAzureApi, setUseAzureApi] = useState(true);
 
   // Função para carregar as mensagens do esquema do usuário
   const loadChatSessions = async () => {
@@ -167,7 +145,7 @@ const useChat = (existingChatId?: string) => {
     } catch (error) {
       console.error("Erro ao carregar histórico de chat:", error);
       // Não mostramos toast de erro para não interromper a experiência
-      // Vamos usar dados simulados nesse caso
+      // Usamos um estado vazio
       if (existingChatId) {
         const mockSession: ChatSession = {
           id: existingChatId,
@@ -322,6 +300,11 @@ const useChat = (existingChatId?: string) => {
   // Função para chamar a API do Azure OpenAI
   const callAzureOpenAI = async (content: string, messageHistory: Message[]): Promise<string> => {
     try {
+      if (!tenant) {
+        console.error("Tenant não está configurado, não é possível chamar Azure OpenAI");
+        throw new Error("Tenant não configurado");
+      }
+      
       // Preparar o formato de mensagens para a API
       const formattedHistory = messageHistory.map(msg => ({
         content: msg.content,
@@ -332,6 +315,7 @@ const useChat = (existingChatId?: string) => {
       console.log("Chamando Azure OpenAI com:", { 
         messageCount: formattedHistory.length,
         mode: mode,
+        tenantId: tenant.id
       });
 
       // Chamar a Edge Function do Supabase
@@ -339,6 +323,7 @@ const useChat = (existingChatId?: string) => {
         body: {
           messages: formattedHistory,
           userMode: mode,
+          tenantId: tenant.id,
           stream: false
         }
       });
@@ -361,18 +346,10 @@ const useChat = (existingChatId?: string) => {
       return data.message;
     } catch (e) {
       console.error("Erro no chat com Azure OpenAI:", e);
-      // Falhar graciosamente para respostas simuladas
-      setUseAzureApi(false);
-      return getFallbackResponse();
+      // Em caso de erro, mostramos um toast para o usuário
+      toast.error("Erro ao processar mensagem. Por favor, tente novamente.");
+      throw e;
     }
-  };
-
-  // Função para obter uma resposta simulada em caso de falha do Azure
-  const getFallbackResponse = (): string => {
-    // Escolher resposta baseada no modo
-    const responses = mode === "business" ? businessResponses : mockResponses;
-    const aiResponse = responses[Math.floor(Math.random() * responses.length)];
-    return aiResponse;
   };
 
   // Função principal para enviar mensagem
@@ -410,22 +387,11 @@ const useChat = (existingChatId?: string) => {
       };
       setChatSession(currentSession);
       
-      // Mensagem de boas-vindas do AI
-      const welcomeMessage: Message = {
-        id: uuidv4(),
-        content: mode === "business" 
-          ? "Olá! Sou o assistente do SightX no modo empresarial. Como posso ajudar sua empresa hoje?" 
-          : "Olá! Sou o assistente do SightX. Como posso ajudar você hoje?",
-        senderId: "ai",
-        timestamp: new Date(),
-        isAI: true,
-      };
-      
-      // Atualizar a sessão com a mensagem de boas-vindas e a mensagem do usuário
-      currentSession.messages = [welcomeMessage, userMessage];
+      // Atualizar a sessão com a mensagem do usuário
+      currentSession.messages = [userMessage];
       
       // Atualizar mensagens
-      setMessages([welcomeMessage, userMessage]);
+      setMessages([userMessage]);
       
       // Adicionar ao histórico local
       setChatHistory(prev => [currentSession!, ...prev]);
@@ -454,8 +420,7 @@ const useChat = (existingChatId?: string) => {
     setMessages(prev => [...prev, aiMessage]);
 
     try {
-      // Determinar se usamos a API Azure ou respostas simuladas
-      let aiResponse;
+      let aiResponse = "";
       let fileComment = "";
       
       if (file) {
@@ -464,15 +429,20 @@ const useChat = (existingChatId?: string) => {
           : `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
       }
       
-      // Por padrão, tentamos sempre usar a API Azure primeiro
-      console.log("Tentando usar Azure OpenAI API");
+      console.log("Chamando Azure OpenAI API para responder à mensagem");
       
       // Chamar a API do Azure OpenAI para obter resposta
-      const messageHistory = [...currentSession.messages, userMessage];
-      aiResponse = await callAzureOpenAI(content, messageHistory);
+      const messageHistory = [...currentSession.messages];
       
-      if (aiResponse && fileComment) {
-        aiResponse += fileComment;
+      try {
+        aiResponse = await callAzureOpenAI(content, messageHistory);
+        
+        if (aiResponse && fileComment) {
+          aiResponse += fileComment;
+        }
+      } catch (error) {
+        console.error("Erro ao chamar Azure OpenAI:", error);
+        aiResponse = "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente mais tarde.";
       }
       
       // Iniciar efeito de digitação
@@ -560,7 +530,6 @@ const useChat = (existingChatId?: string) => {
       }
       
       setIsProcessing(false);
-      setUseAzureApi(false); // Falhar para respostas simuladas após erro
     }
   };
 
