@@ -8,9 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
 
-type ChatMessagesRow = Database['public']['Tables']['chat_messages']['Row'];
-type ChatSessionsRow = Database['public']['Tables']['chat_sessions']['Row'];
-
+// Fallback para respostas simuladas quando o Azure não estiver disponível
 const mockResponses = [
   "Olá! Como posso ajudar você hoje?",
   "Estou processando sua pergunta. Um momento, por favor...",
@@ -51,6 +49,7 @@ const useChat = (existingChatId?: string) => {
     fullMessage: "",
     progress: 0
   });
+  const [useAzureApi, setUseAzureApi] = useState(true);
 
   // Função para carregar as mensagens do esquema do usuário
   const loadChatSessions = async () => {
@@ -321,6 +320,47 @@ const useChat = (existingChatId?: string) => {
     };
   }, [aiTyping.isTyping]);
 
+  // Função para chamar a API do Azure OpenAI
+  const callAzureOpenAI = async (content: string, messageHistory: Message[]): Promise<string> => {
+    try {
+      // Preparar o formato de mensagens para a API
+      const formattedHistory = messageHistory.map(msg => ({
+        content: msg.content,
+        isAI: msg.isAI,
+      }));
+
+      // Chamar a Edge Function do Supabase
+      const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
+        body: {
+          messages: formattedHistory,
+          userMode: mode,
+          stream: false
+        }
+      });
+
+      if (error) {
+        console.error("Erro ao chamar Azure OpenAI:", error);
+        throw error;
+      }
+
+      return data.message || "";
+    } catch (e) {
+      console.error("Erro no chat com Azure OpenAI:", e);
+      // Falhar graciosamente para respostas simuladas
+      setUseAzureApi(false);
+      return getFallbackResponse();
+    }
+  };
+
+  // Função para obter uma resposta simulada em caso de falha do Azure
+  const getFallbackResponse = (): string => {
+    // Escolher resposta baseada no modo
+    const responses = mode === "business" ? businessResponses : mockResponses;
+    const aiResponse = responses[Math.floor(Math.random() * responses.length)];
+    return aiResponse;
+  };
+
+  // Função principal para enviar mensagem
   const sendMessage = async (content: string, file?: File) => {
     if (!user) return;
 
@@ -386,48 +426,58 @@ const useChat = (existingChatId?: string) => {
     // Iniciar "pensamento" do AI
     setIsProcessing(true);
 
-    // Simular resposta do AI (1-2 segundos de atraso)
-    setTimeout(() => {
-      // Escolher resposta baseada no modo
-      const responses = mode === "business" ? businessResponses : mockResponses;
-      const aiResponse = responses[Math.floor(Math.random() * responses.length)];
-      
-      // Se houver anexo, adicionar um comentário específico do modo
-      const fileComment = file 
-        ? mode === "business"
-          ? `\n\nNotei que você anexou um documento empresarial "${file.name}". Vou analisar seu conteúdo do ponto de vista comercial.`
-          : `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`
-        : '';
-      
-      const fullContent = aiResponse + fileComment;
+    // Criar mensagem do AI vazia para iniciar
+    const aiMessage: Message = {
+      id: uuidv4(),
+      content: "",
+      senderId: "ai",
+      timestamp: new Date(),
+      isAI: true,
+    };
 
+    // Adicionar a mensagem com conteúdo vazio, iremos atualizá-la quando obtivermos a resposta
+    setMessages(prev => [...prev, aiMessage]);
+
+    try {
+      // Determinar se usamos a API Azure ou respostas simuladas
+      let aiResponse;
+      let fileComment = "";
+      
+      if (file) {
+        fileComment = mode === "business"
+          ? `\n\nNotei que você anexou um documento empresarial "${file.name}". Vou analisar seu conteúdo do ponto de vista comercial.`
+          : `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
+      }
+      
+      if (useAzureApi) {
+        // Chamar a API do Azure OpenAI para obter resposta
+        const messageHistory = [...currentSession.messages, userMessage];
+        aiResponse = await callAzureOpenAI(content, messageHistory);
+        
+        if (aiResponse && fileComment) {
+          aiResponse += fileComment;
+        }
+      } else {
+        // Usar resposta simulada caso a API tenha falhado anteriormente
+        const baseResponse = getFallbackResponse();
+        aiResponse = baseResponse + (fileComment || "");
+      }
+      
       // Iniciar efeito de digitação
       setAiTyping({
         isTyping: true,
         partialMessage: "",
-        fullMessage: fullContent,
+        fullMessage: aiResponse,
         progress: 0
       });
       
-      // Criar mensagem do AI mas não adicionar às mensagens ainda - iremos atualizá-la durante a digitação
-      const aiMessage: Message = {
-        id: uuidv4(),
-        content: "",
-        senderId: "ai",
-        timestamp: new Date(),
-        isAI: true,
-      };
-
-      // Adicionar a mensagem com conteúdo vazio, iremos atualizá-la via efeito de digitação
-      setMessages(prev => [...prev, aiMessage]);
-
       // Configurar intervalo para verificar status de digitação e finalizar quando terminar
       const checkTypingInterval = setInterval(() => {
         if (!aiTyping.isTyping) {
           clearInterval(checkTypingInterval);
           
           // Finalizar a mensagem com o conteúdo completo
-          const updatedAiMessage = {...aiMessage, content: fullContent};
+          const updatedAiMessage = {...aiMessage, content: aiResponse};
           
           setMessages(prev => 
             prev.map(msg => msg.id === aiMessage.id 
@@ -438,10 +488,10 @@ const useChat = (existingChatId?: string) => {
           
           // Atualizar a sessão de chat
           if (currentSession) {
-            const newMessages = needNewSession ? [] : [userMessage, updatedAiMessage];
+            const newMessages = [userMessage, updatedAiMessage];
             const updatedSession = {
               ...currentSession,
-              messages: [...currentSession.messages, ...(needNewSession ? [] : [updatedAiMessage])],
+              messages: [...currentSession.messages, updatedAiMessage],
               updatedAt: new Date(),
             };
             
@@ -455,15 +505,51 @@ const useChat = (existingChatId?: string) => {
             );
             
             // Salvar no esquema do usuário
-            if (!needNewSession) {
-              updateSession(currentSession, newMessages);
-            }
+            updateSession(currentSession, newMessages);
           }
           
           setIsProcessing(false);
         }
       }, 100);
-    }, Math.random() * 1000 + 1000);
+    } catch (error) {
+      console.error("Erro ao processar mensagem:", error);
+      // Em caso de erro, adicionar mensagem de erro como resposta do AI
+      const errorMessage = "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente mais tarde.";
+      
+      // Atualizar a mensagem do AI com o erro
+      setMessages(prev => 
+        prev.map(msg => msg.id === aiMessage.id 
+          ? {...msg, content: errorMessage} 
+          : msg
+        )
+      );
+      
+      // Atualizar a sessão de chat
+      if (currentSession) {
+        const updatedAiMessage = {...aiMessage, content: errorMessage};
+        const newMessages = [userMessage, updatedAiMessage];
+        const updatedSession = {
+          ...currentSession,
+          messages: [...currentSession.messages, updatedAiMessage],
+          updatedAt: new Date(),
+        };
+        
+        setChatSession(updatedSession);
+        
+        // Atualizar histórico de chat local
+        setChatHistory(prev => 
+          prev.map(chat => 
+            chat.id === updatedSession.id ? updatedSession : chat
+          )
+        );
+        
+        // Salvar no esquema do usuário
+        updateSession(currentSession, newMessages);
+      }
+      
+      setIsProcessing(false);
+      setUseAzureApi(false); // Falhar para respostas simuladas após erro
+    }
   };
 
   const generateChatTitle = (firstMessage: string) => {

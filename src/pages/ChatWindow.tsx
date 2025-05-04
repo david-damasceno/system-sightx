@@ -19,7 +19,7 @@ const ChatWindow = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const { mode } = useMode();
-  const { messages, sendMessage, isProcessing, aiTyping, chatSession } = useChat(id);
+  const { messages, sendMessage, isProcessing, aiTyping, chatSession, chatHistory } = useChat(id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -116,8 +116,6 @@ const ChatWindow = () => {
       toast.info("Compartilhamento não suportado neste navegador");
     }
   };
-
-  // Removido o indicador de carregamento - sempre mostra a interface de chat
 
   return (
     <div className="flex flex-col h-screen">
