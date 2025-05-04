@@ -7,7 +7,7 @@ import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import MessageSearch from "../components/MessageSearch";
 import useChat from "../hooks/useChat";
-import { Loader2, MessageCircle, FileText, Image as ImageIcon, Briefcase, User, Search, Download, Share2 } from "lucide-react";
+import { Briefcase, User, Search, Download, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ const ChatWindow = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const { mode } = useMode();
-  const { messages, sendMessage, isProcessing, aiTyping, chatSession, isLoading } = useChat(id);
+  const { messages, sendMessage, isProcessing, aiTyping, chatSession } = useChat(id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -117,15 +117,7 @@ const ChatWindow = () => {
     }
   };
 
-  // Mostrar indicador de carregamento enquanto buscamos os dados
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 text-sightx-purple animate-spin mb-4" />
-        <p className="text-muted-foreground">Carregando conversa...</p>
-      </div>
-    );
-  }
+  // Removido o indicador de carregamento - sempre mostra a interface de chat
 
   return (
     <div className="flex flex-col h-screen">
@@ -191,7 +183,10 @@ const ChatWindow = () => {
           className="absolute bottom-20 right-4 rounded-full shadow-md animate-fade-in"
           onClick={scrollToBottom}
         >
-          <MessageCircle className="h-4 w-4" />
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevrons-down h-4 w-4">
+            <path d="m7 13 5 5 5-5"/>
+            <path d="m7 7 5 5 5-5"/>
+          </svg>
         </Button>
       )}
     </div>
