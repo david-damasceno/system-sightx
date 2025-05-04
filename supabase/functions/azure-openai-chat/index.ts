@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 // Configurações do CORS
 const corsHeaders = {
@@ -35,15 +34,6 @@ serve(async (req) => {
       );
     }
 
-    // Criar cliente Supabase para acessar dados autenticados
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // Extrair dados da solicitação
     const requestData = await req.json();
     const { messages, userMode, stream = false } = requestData;
@@ -71,6 +61,14 @@ serve(async (req) => {
         content: msg.content,
       })),
     ];
+
+    // Debug log
+    console.log("Enviando para Azure OpenAI:", {
+      url: chatApiUrl,
+      model: AZURE_OPENAI_MODEL,
+      messageCount: formattedMessages.length,
+      stream: stream,
+    });
 
     // Configurar a solicitação para a API do Azure OpenAI
     const openaiRequestBody = {
@@ -148,7 +146,24 @@ serve(async (req) => {
     } else {
       // Modo não-streaming: retorna a resposta completa
       const data = await openaiResponse.json();
+      console.log("Resposta da Azure OpenAI recebida:", {
+        status: openaiResponse.status,
+        hasChoices: data.choices && data.choices.length > 0,
+      });
+
+      if (!data.choices || data.choices.length === 0) {
+        console.error("Resposta sem choices:", data);
+        return new Response(
+          JSON.stringify({ error: "Resposta inválida da API do Azure OpenAI" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
       const aiMessage = data.choices[0].message.content;
+      console.log("Mensagem da IA:", aiMessage.substring(0, 100) + "...");
 
       return new Response(
         JSON.stringify({ message: aiMessage }),

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
@@ -329,6 +328,12 @@ const useChat = (existingChatId?: string) => {
         isAI: msg.isAI,
       }));
 
+      // Log para debug
+      console.log("Chamando Azure OpenAI com:", { 
+        messageCount: formattedHistory.length,
+        mode: mode,
+      });
+
       // Chamar a Edge Function do Supabase
       const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
         body: {
@@ -339,11 +344,21 @@ const useChat = (existingChatId?: string) => {
       });
 
       if (error) {
-        console.error("Erro ao chamar Azure OpenAI:", error);
+        console.error("Erro ao chamar Azure OpenAI via Edge Function:", error);
         throw error;
       }
 
-      return data.message || "";
+      // Verificar se temos uma resposta válida
+      if (!data || !data.message) {
+        console.error("Resposta inválida da Edge Function:", data);
+        throw new Error("Resposta inválida da API do Azure OpenAI");
+      }
+
+      console.log("Resposta da IA recebida com sucesso", {
+        messageLength: data.message.length,
+      });
+
+      return data.message;
     } catch (e) {
       console.error("Erro no chat com Azure OpenAI:", e);
       // Falhar graciosamente para respostas simuladas
@@ -449,18 +464,15 @@ const useChat = (existingChatId?: string) => {
           : `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
       }
       
-      if (useAzureApi) {
-        // Chamar a API do Azure OpenAI para obter resposta
-        const messageHistory = [...currentSession.messages, userMessage];
-        aiResponse = await callAzureOpenAI(content, messageHistory);
-        
-        if (aiResponse && fileComment) {
-          aiResponse += fileComment;
-        }
-      } else {
-        // Usar resposta simulada caso a API tenha falhado anteriormente
-        const baseResponse = getFallbackResponse();
-        aiResponse = baseResponse + (fileComment || "");
+      // Por padrão, tentamos sempre usar a API Azure primeiro
+      console.log("Tentando usar Azure OpenAI API");
+      
+      // Chamar a API do Azure OpenAI para obter resposta
+      const messageHistory = [...currentSession.messages, userMessage];
+      aiResponse = await callAzureOpenAI(content, messageHistory);
+      
+      if (aiResponse && fileComment) {
+        aiResponse += fileComment;
       }
       
       // Iniciar efeito de digitação
