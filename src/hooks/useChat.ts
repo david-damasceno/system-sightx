@@ -188,6 +188,7 @@ const useChat = (existingChatId?: string) => {
           id: msg.id,
           session_id: session.id,
           content: msg.content,
+          // Correção aqui: mudamos de sender_id para senderId
           sender_id: msg.senderId,
           is_ai: msg.isAI,
           timestamp: msg.timestamp.toISOString(),
@@ -231,6 +232,7 @@ const useChat = (existingChatId?: string) => {
           id: msg.id,
           session_id: session.id,
           content: msg.content,
+          // Correção aqui: mudamos de sender_id para senderId
           sender_id: msg.senderId,
           is_ai: msg.isAI,
           timestamp: msg.timestamp.toISOString(),
