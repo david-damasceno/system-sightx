@@ -27,9 +27,11 @@ serve(async (req) => {
     if (!AZURE_OPENAI_API_KEY) {
       console.error("Erro: AZURE_OPENAI_API_KEY não está configurada");
       return new Response(
-        JSON.stringify({ error: "A chave da API do Azure OpenAI não está configurada" }),
+        JSON.stringify({ 
+          message: "A configuração do sistema ainda está em andamento. Por favor, tente novamente em alguns instantes." 
+        }),
         {
-          status: 500,
+          status: 200, // Enviamos 200 para não mostrar erro, apenas a mensagem de fallback
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -45,9 +47,11 @@ serve(async (req) => {
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       console.error("Erro: Formato de mensagens inválido", { messages });
       return new Response(
-        JSON.stringify({ error: "Formato de mensagens inválido" }),
+        JSON.stringify({ 
+          message: "Não foi possível processar sua mensagem devido a um formato inválido. Por favor, tente novamente." 
+        }),
         {
-          status: 400,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -101,9 +105,11 @@ serve(async (req) => {
       const errorData = await openaiResponse.json();
       console.error("Erro na API do Azure OpenAI:", errorData);
       return new Response(
-        JSON.stringify({ error: "Erro ao comunicar com Azure OpenAI", details: errorData }),
+        JSON.stringify({ 
+          message: "Desculpe, não foi possível conectar com os servidores de IA neste momento. Por favor, tente novamente mais tarde." 
+        }),
         {
-          status: openaiResponse.status,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -161,9 +167,11 @@ serve(async (req) => {
       if (!data.choices || data.choices.length === 0) {
         console.error("Resposta sem choices:", data);
         return new Response(
-          JSON.stringify({ error: "Resposta inválida da API do Azure OpenAI" }),
+          JSON.stringify({ 
+            message: "O serviço de IA não retornou uma resposta válida. Por favor, tente novamente." 
+          }),
           {
-            status: 500,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
@@ -183,9 +191,11 @@ serve(async (req) => {
   } catch (error) {
     console.error("Erro na função azure-openai-chat:", error);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor", details: error.message }),
+      JSON.stringify({ 
+        message: "Ocorreu um erro inesperado. Estamos trabalhando para resolver o problema. Por favor, tente novamente em alguns instantes." 
+      }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );

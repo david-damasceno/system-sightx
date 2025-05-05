@@ -7,7 +7,7 @@ import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import MessageSearch from "../components/MessageSearch";
 import useChat from "../hooks/useChat";
-import { Briefcase, User, Search, Download, Share2 } from "lucide-react";
+import { Briefcase, User, Search, Download, Share2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { useMobile } from "@/hooks/use-mobile";
 
 const ChatWindow = () => {
   const { id } = useParams();
@@ -28,6 +29,18 @@ const ChatWindow = () => {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const isMobile = useMobile();
+  const [showTenantAlert, setShowTenantAlert] = useState(false);
+
+  // Verificar problemas de configuração
+  const { tenant } = useAuth();
+  useEffect(() => {
+    if (user && !tenant?.schema_name) {
+      setShowTenantAlert(true);
+    } else {
+      setShowTenantAlert(false);
+    }
+  }, [user, tenant]);
 
   // Send message handler
   const handleSendMessage = (content: string, file?: File) => {
@@ -123,8 +136,22 @@ const ChatWindow = () => {
       {/* Search overlay */}
       {showSearch && <MessageSearch messages={messages} onSearchResult={handleSearchResult} onClose={() => setShowSearch(false)} />}
       
+      {/* Alert para tenant não configurado */}
+      {showTenantAlert && (
+        <Alert className="m-4" variant="default">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Configuração em andamento</AlertTitle>
+          <AlertDescription>
+            O sistema está sendo configurado em segundo plano. Algumas funcionalidades podem não estar disponíveis temporariamente.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {/* Chat messages area */}
-      <ScrollArea className="flex-1 p-4 pt-6 space-y-6" onScrollCapture={handleScroll} ref={scrollContainerRef}>
+      <ScrollArea className={cn(
+        "flex-1 p-4 pt-6 space-y-6", 
+        isMobile ? "px-2" : "px-4"
+      )} onScrollCapture={handleScroll} ref={scrollContainerRef}>
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full flex-col gap-4 text-muted-foreground">
             <p className="text-center text-lg font-medium">Bem-vindo ao SightX Chat</p>
@@ -150,7 +177,10 @@ const ChatWindow = () => {
         
         {/* AI is typing indicator */}
         {isProcessing && !aiTyping.isTyping && (
-          <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
+          <div className={cn(
+            "flex items-center gap-2 animate-pulse opacity-80",
+            isMobile ? "ml-4" : "ml-10"
+          )}>
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sightx-purple">
               <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-5 w-5" />
             </div>
@@ -159,6 +189,7 @@ const ChatWindow = () => {
               <div className="w-2 h-2 rounded-full animate-pulse delay-150 bg-sightx-purple"></div>
               <div className="w-2 h-2 rounded-full animate-pulse delay-300 bg-sightx-purple"></div>
             </div>
+            <span className="text-sm">Processando...</span>
           </div>
         )}
         
@@ -179,7 +210,7 @@ const ChatWindow = () => {
         <Button
           size="icon"
           variant="outline"
-          className="absolute bottom-20 right-4 rounded-full shadow-md animate-fade-in"
+          className="absolute bottom-20 right-4 z-10 rounded-full shadow-md animate-fade-in"
           onClick={scrollToBottom}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevrons-down h-4 w-4">
@@ -187,6 +218,47 @@ const ChatWindow = () => {
             <path d="m7 7 5 5 5-5"/>
           </svg>
         </Button>
+      )}
+      
+      {/* Flutuante de ações mobile */}
+      {isMobile && messages.length > 0 && (
+        <div className="fixed bottom-24 right-4 z-10 flex flex-col gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  size="icon" 
+                  variant="secondary" 
+                  className="h-10 w-10 rounded-full shadow-lg"
+                  onClick={exportChat}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Exportar conversa</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  size="icon" 
+                  variant="secondary" 
+                  className="h-10 w-10 rounded-full shadow-lg"
+                  onClick={shareChat}
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Compartilhar conversa</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       )}
     </div>
   );

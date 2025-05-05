@@ -302,9 +302,10 @@ const useChat = (existingChatId?: string) => {
   // Função para chamar a API do Azure OpenAI
   const callAzureOpenAI = async (content: string, messageHistory: Message[]): Promise<string> => {
     try {
+      // Verificar se o tenant está configurado e criar uma resposta de fallback caso não esteja
       if (!tenant) {
-        console.error("Tenant não está configurado, não é possível chamar Azure OpenAI");
-        throw new Error("Tenant não configurado");
+        console.warn("Tenant não está configurado, usando resposta de fallback");
+        return "Olá! Parece que seu ambiente ainda está sendo configurado. Por favor, aguarde um momento enquanto nossos sistemas são inicializados. Você poderá conversar normalmente em breve!";
       }
       
       // Preparar o formato de mensagens para a API
@@ -350,7 +351,9 @@ const useChat = (existingChatId?: string) => {
       console.error("Erro no chat com Azure OpenAI:", e);
       // Em caso de erro, mostramos um toast para o usuário
       toast.error("Erro ao processar mensagem. Por favor, tente novamente.");
-      throw e;
+      
+      // Retornar uma mensagem de erro amigável para mostrar ao usuário
+      return "Desculpe, ocorreu um problema ao processar sua mensagem. Isso pode acontecer quando o sistema ainda está sendo configurado. Por favor, tente novamente em alguns instantes.";
     }
   };
 
@@ -444,7 +447,7 @@ const useChat = (existingChatId?: string) => {
         }
       } catch (error) {
         console.error("Erro ao chamar Azure OpenAI:", error);
-        aiResponse = "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente mais tarde.";
+        aiResponse = "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente mais tarde ou verifique se seu ambiente está configurado corretamente.";
       }
       
       // Iniciar efeito de digitação
