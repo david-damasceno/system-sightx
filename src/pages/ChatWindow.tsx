@@ -15,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from "@/components/ui/drawer";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const ChatWindow = () => {
   const { id } = useParams();
@@ -28,6 +31,7 @@ const ChatWindow = () => {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   // Send message handler
   const handleSendMessage = (content: string, file?: File) => {
@@ -118,13 +122,71 @@ const ChatWindow = () => {
     }
   };
 
+  // Mobile actions drawer component
+  const MobileActions = () => (
+    <Drawer>
+      <DrawerTrigger asChild>
+        <Button 
+          size="icon" 
+          variant="outline" 
+          className="fixed bottom-20 left-4 z-10 h-10 w-10 rounded-full shadow-md"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            className="lucide lucide-more-horizontal h-5 w-5"
+          >
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </Button>
+      </DrawerTrigger>
+      <DrawerContent className="px-4 pb-6">
+        <div className="flex justify-center pt-4 pb-2">
+          <h3 className="text-lg font-medium">Ações</h3>
+        </div>
+        <div className="grid grid-cols-3 gap-4 pt-2">
+          <Button 
+            variant="outline" 
+            className="flex flex-col items-center gap-1 h-auto py-3" 
+            onClick={() => setShowSearch(true)}
+          >
+            <Search className="h-5 w-5" />
+            <span className="text-xs">Buscar</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="flex flex-col items-center gap-1 h-auto py-3" 
+            onClick={exportChat}
+          >
+            <Download className="h-5 w-5" />
+            <span className="text-xs">Exportar</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="flex flex-col items-center gap-1 h-auto py-3" 
+            onClick={shareChat}
+          >
+            <Share2 className="h-5 w-5" />
+            <span className="text-xs">Compartilhar</span>
+          </Button>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+
   return (
     <div className="flex flex-col h-screen">
       {/* Search overlay */}
       {showSearch && <MessageSearch messages={messages} onSearchResult={handleSearchResult} onClose={() => setShowSearch(false)} />}
       
       {/* Chat messages area */}
-      <ScrollArea className="flex-1 p-4 pt-6 space-y-6" onScrollCapture={handleScroll} ref={scrollContainerRef}>
+      <ScrollArea className="flex-1 p-4 md:pt-6 space-y-6" onScrollCapture={handleScroll} ref={scrollContainerRef}>
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full flex-col gap-4 text-muted-foreground">
             <p className="text-center text-lg font-medium">Bem-vindo ao SightX Chat</p>
@@ -150,7 +212,7 @@ const ChatWindow = () => {
         
         {/* AI is typing indicator */}
         {isProcessing && !aiTyping.isTyping && (
-          <div className="flex items-center gap-2 animate-pulse ml-10 opacity-80">
+          <div className="flex items-center gap-2 animate-pulse ml-4 md:ml-10 opacity-80">
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sightx-purple">
               <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-5 w-5" />
             </div>
@@ -174,12 +236,15 @@ const ChatWindow = () => {
         messages={messages} 
       />
 
+      {/* Mobile actions */}
+      {isMobile && <MobileActions />}
+
       {/* Scroll to bottom button */}
       {showScrollToBottom && (
         <Button
           size="icon"
           variant="outline"
-          className="absolute bottom-20 right-4 rounded-full shadow-md animate-fade-in"
+          className="fixed bottom-20 right-4 rounded-full shadow-md animate-fade-in z-10"
           onClick={scrollToBottom}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevrons-down h-4 w-4">

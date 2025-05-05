@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import FilePreview from "./FilePreview";
 import VoiceRecorder from "./VoiceRecorder";
 import { useMode } from "../contexts/ModeContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ChatInputProps {
   onSendMessage: (message: string, file?: File) => void;
@@ -34,6 +35,7 @@ const ChatInput = ({
   const [improvingMessage, setImprovingMessage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = useIsMobile();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -150,7 +152,7 @@ const ChatInput = ({
     <div className="border-t glass-panel bg-opacity-30 shadow-lg py-[10px] flex flex-col">
       {/* Voice recorder */}
       {showVoiceRecorder && (
-        <div className="px-[100px] mb-3">
+        <div className={isMobile ? "px-4 mb-3" : "px-[100px] mb-3"}>
           <VoiceRecorder 
             onRecordingComplete={handleVoiceRecordingComplete} 
             onCancel={() => setShowVoiceRecorder(false)} 
@@ -160,7 +162,7 @@ const ChatInput = ({
 
       {/* File preview */}
       {selectedFile && (
-        <div className="px-[100px] mb-2">
+        <div className={isMobile ? "px-4 mb-2" : "px-[100px] mb-2"}>
           <FilePreview 
             file={selectedFile} 
             onRemove={() => setSelectedFile(null)} 
@@ -169,7 +171,10 @@ const ChatInput = ({
       )}
 
       {/* Input area */}
-      <form onSubmit={handleSubmit} className="p-4 px-[100px] flex items-center justify-between">
+      <form onSubmit={handleSubmit} className={cn(
+        "p-4 flex items-center justify-between",
+        isMobile ? "px-4" : "px-[100px]"
+      )}>
         <div className={cn(
           "relative flex items-end rounded-xl overflow-hidden border transition-all flex-1", 
           focused ? "ring-2 ring-sightx-purple" : "", 
@@ -181,7 +186,10 @@ const ChatInput = ({
             onChange={e => setMessage(e.target.value)} 
             onKeyDown={handleKeyDown} 
             placeholder="Escreva sua mensagem..." 
-            className="pr-24 resize-none min-h-[56px] max-h-[200px] rounded-xl py-3.5 transition-all" 
+            className={cn(
+              "resize-none min-h-[56px] max-h-[200px] rounded-xl py-3.5 transition-all",
+              isMobile ? "pr-16" : "pr-24"
+            )}
             disabled={isProcessing || showVoiceRecorder || improvingMessage} 
             rows={1} 
             onFocus={() => setFocused(true)} 
@@ -190,97 +198,16 @@ const ChatInput = ({
               overflowY: "auto"
             }}
           />
-          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+          <div className={cn(
+            "absolute bottom-1.5 right-1.5 flex items-center",
+            isMobile ? "gap-0.5" : "gap-1.5"
+          )}>
             {/* Tools */}
-            <div className="flex gap-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
-                      onClick={() => fileInputRef.current?.click()} 
-                      disabled={isProcessing || showVoiceRecorder || improvingMessage}
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Anexar arquivo</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
-                      onClick={() => setShowVoiceRecorder(true)} 
-                      disabled={isProcessing || showVoiceRecorder || improvingMessage}
-                    >
-                      <Mic className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Mensagem de voz</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
-                      onClick={onOpenSearch} 
-                      disabled={isProcessing || messages.length <= 1 || improvingMessage}
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Buscar na conversa</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              {!isImproved && message.trim() ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        type="button" 
-                        size="icon" 
-                        variant="ghost" 
-                        className={cn(
-                          "h-8 w-8 rounded-full transition-colors",
-                          improvingMessage ? "opacity-50" : "hover:bg-sightx-purple/10"
-                        )}
-                        onClick={improveMessage}
-                        disabled={isProcessing || improvingMessage || !message.trim()}
-                      >
-                        {improvingMessage ? (
-                          <span className="animate-spin h-4 w-4 border-2 border-sightx-purple border-t-transparent rounded-full" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Melhorar mensagem</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : isImproved ? (
+            <div className={cn(
+              "flex", 
+              isMobile ? "gap-0.5" : "gap-1"
+            )}>
+              {!isMobile && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -289,18 +216,102 @@ const ChatInput = ({
                         size="icon" 
                         variant="ghost" 
                         className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
-                        onClick={restoreOriginalMessage}
-                        disabled={isProcessing || improvingMessage}
+                        onClick={() => fileInputRef.current?.click()} 
+                        disabled={isProcessing || showVoiceRecorder || improvingMessage}
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        <Paperclip className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Restaurar texto original</p>
+                      <p>Anexar arquivo</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              ) : null}
+              )}
+              
+              {!isMobile && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
+                        onClick={() => setShowVoiceRecorder(true)} 
+                        disabled={isProcessing || showVoiceRecorder || improvingMessage}
+                      >
+                        <Mic className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Mensagem de voz</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              
+              {isMobile ? (
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  disabled={isProcessing || showVoiceRecorder || improvingMessage}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+              ) : (
+                !isImproved && message.trim() ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          type="button" 
+                          size="icon" 
+                          variant="ghost" 
+                          className={cn(
+                            "h-8 w-8 rounded-full transition-colors",
+                            improvingMessage ? "opacity-50" : "hover:bg-sightx-purple/10"
+                          )}
+                          onClick={improveMessage}
+                          disabled={isProcessing || improvingMessage || !message.trim()}
+                        >
+                          {improvingMessage ? (
+                            <span className="animate-spin h-4 w-4 border-2 border-sightx-purple border-t-transparent rounded-full" />
+                          ) : (
+                            <Sparkles className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Melhorar mensagem</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : isImproved ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          type="button" 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
+                          onClick={restoreOriginalMessage}
+                          disabled={isProcessing || improvingMessage}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Restaurar texto original</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : null
+              )}
             </div>
             
             {/* Send button */}
@@ -308,14 +319,15 @@ const ChatInput = ({
               type="submit" 
               size="icon" 
               className={cn(
-                "rounded-full h-8 w-8 transition-all", 
+                "rounded-full transition-all", 
+                isMobile ? "h-7 w-7" : "h-8 w-8",
                 !isProcessing && (message.trim() || selectedFile) ? 
                   "bg-sightx-purple hover:bg-sightx-purple-light" : 
                   "bg-muted text-muted-foreground"
               )} 
               disabled={!message.trim() && !selectedFile || isProcessing || showVoiceRecorder || improvingMessage}
             >
-              <SendHorizonal className="h-4 w-4" />
+              <SendHorizonal className={cn(isMobile ? "h-3.5 w-3.5" : "h-4 w-4")} />
             </Button>
           </div>
           <input 
@@ -337,16 +349,17 @@ const ChatInput = ({
                   size="sm"
                   variant="outline"
                   className={cn(
-                    "rounded-full h-10 w-10 p-0 border transition-all flex items-center justify-center",
+                    "rounded-full p-0 border transition-all flex items-center justify-center",
+                    isMobile ? "h-8 w-8" : "h-10 w-10",
                     mode === "business" 
                       ? "bg-sightx-purple/10 text-sightx-purple border-sightx-purple/30" 
                       : "bg-sightx-green/10 text-sightx-green border-sightx-green/30"
                   )}
                 >
                   {mode === "business" ? (
-                    <Briefcase className="h-5 w-5" />
+                    <Briefcase className={cn(isMobile ? "h-4 w-4" : "h-5 w-5")} />
                   ) : (
-                    <User className="h-5 w-5" />
+                    <User className={cn(isMobile ? "h-4 w-4" : "h-5 w-5")} />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -357,22 +370,24 @@ const ChatInput = ({
           </TooltipProvider>
         </div>
         
-        {/* Helper text */}
-        <div className="mt-2 absolute bottom-1 left-[100px] flex justify-between items-center text-xs text-muted-foreground">
-          <div>
-            <span className="opacity-70">Shift + Enter para nova linha</span>
+        {/* Helper text - only show on desktop */}
+        {!isMobile && (
+          <div className="mt-2 absolute bottom-1 left-[100px] flex justify-between items-center text-xs text-muted-foreground">
+            <div>
+              <span className="opacity-70">Shift + Enter para nova linha</span>
+            </div>
+            <div className="flex gap-2">
+              {isProcessing && <span className="animate-pulse">Processando...</span>}
+              {improvingMessage && <span className="animate-pulse">Melhorando mensagem...</span>}
+              {isImproved && !improvingMessage && (
+                <span className="text-sightx-purple flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Texto melhorado
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {isProcessing && <span className="animate-pulse">Processando...</span>}
-            {improvingMessage && <span className="animate-pulse">Melhorando mensagem...</span>}
-            {isImproved && !improvingMessage && (
-              <span className="text-sightx-purple flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
-                Texto melhorado
-              </span>
-            )}
-          </div>
-        </div>
+        )}
       </form>
     </div>
   );
