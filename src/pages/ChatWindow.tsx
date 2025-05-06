@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -15,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ChatWindow = () => {
   const { id } = useParams();
@@ -29,7 +28,7 @@ const ChatWindow = () => {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [showTenantAlert, setShowTenantAlert] = useState(false);
 
   // Verificar problemas de configuração
