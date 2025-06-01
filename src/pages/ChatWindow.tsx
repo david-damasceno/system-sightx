@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -6,14 +7,13 @@ import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import MessageSearch from "../components/MessageSearch";
 import useChat from "../hooks/useChat";
-import { Briefcase, User, Search, Download, Share2, AlertTriangle } from "lucide-react";
+import { Briefcase, User, Search, Download, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const ChatWindow = () => {
@@ -29,17 +29,6 @@ const ChatWindow = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const [showTenantAlert, setShowTenantAlert] = useState(false);
-
-  // Verificar problemas de configuração
-  const { tenant } = useAuth();
-  useEffect(() => {
-    if (user && !tenant?.schema_name) {
-      setShowTenantAlert(true);
-    } else {
-      setShowTenantAlert(false);
-    }
-  }, [user, tenant]);
 
   // Send message handler
   const handleSendMessage = (content: string, file?: File) => {
@@ -134,17 +123,6 @@ const ChatWindow = () => {
     <div className="flex flex-col h-screen">
       {/* Search overlay */}
       {showSearch && <MessageSearch messages={messages} onSearchResult={handleSearchResult} onClose={() => setShowSearch(false)} />}
-      
-      {/* Alert para tenant não configurado */}
-      {showTenantAlert && (
-        <Alert className="m-4" variant="default">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Configuração em andamento</AlertTitle>
-          <AlertDescription>
-            O sistema está sendo configurado em segundo plano. Algumas funcionalidades podem não estar disponíveis temporariamente.
-          </AlertDescription>
-        </Alert>
-      )}
       
       {/* Chat messages area */}
       <ScrollArea className={cn(

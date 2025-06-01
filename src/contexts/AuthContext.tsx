@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "../types";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +10,6 @@ interface Tenant {
   id: string;
   schema_name: string;
   storage_folder: string | null;
-  airbyte_destination_id: string | null;
   status: string;
   error_message?: string;
 }
@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', tenantId)
         .single();
 
-      // Correção aqui: verificar primeiro se houve erro na consulta
+      // Verificar primeiro se houve erro na consulta
       if (tenantError) {
         console.error("Erro ao verificar o status do tenant:", tenantError);
         setActivationInProgress(false);
@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           })
           .eq('id', tenantId);
         
-        const errorTenant = await fetchTenant(user?.id || '');
+        await fetchTenant(user?.id || '');
         
         toast({
           variant: "destructive",
@@ -163,31 +163,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Tratar resultado da função
       if (data && data.success) {
         console.log("Tenant ativado com sucesso:", data);
-        
-        // Verificar sucesso específico do Airbyte
-        if (data.airbyte && !data.airbyte.success) {
-          console.error("Erro na configuração do Airbyte:", data.airbyte.error);
-          
-          await supabase
-            .from('tenants')
-            .update({ 
-              status: 'error', 
-              updated_at: new Date().toISOString(),
-              error_message: `Erro ao configurar o Airbyte: ${data.airbyte.error}`
-            })
-            .eq('id', tenantId);
-          
-          const errorTenant = await fetchTenant(user?.id || '');
-          
-          toast({
-            variant: "destructive",
-            title: "Erro na configuração do Airbyte",
-            description: data.airbyte.error || "Erro ao configurar o Airbyte.",
-          });
-          
-          setActivationInProgress(false);
-          return;
-        }
         
         toast({
           title: "Configuração concluída",
@@ -210,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', tenantId);
         
         // Buscar tenant com erro
-        const errorTenant = await fetchTenant(user?.id || '');
+        await fetchTenant(user?.id || '');
         
         toast({
           variant: "destructive",
@@ -232,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', tenantId);
       
       // Buscar tenant com erro
-      const errorTenant = await fetchTenant(user?.id || '');
+      await fetchTenant(user?.id || '');
       
       toast({
         variant: "destructive",

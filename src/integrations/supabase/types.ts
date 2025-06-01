@@ -73,7 +73,6 @@ export type Database = {
       }
       tenants: {
         Row: {
-          airbyte_destination_id: string | null
           created_at: string | null
           id: string
           schema_name: string
@@ -83,7 +82,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          airbyte_destination_id?: string | null
           created_at?: string | null
           id?: string
           schema_name: string
@@ -93,7 +91,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          airbyte_destination_id?: string | null
           created_at?: string | null
           id?: string
           schema_name?: string

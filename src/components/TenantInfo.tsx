@@ -62,38 +62,10 @@ export const TenantInfo = () => {
               {!tenant.storage_folder && tenant.status === 'error' && <AlertCircle className="h-4 w-4 ml-auto text-red-500" />}
             </div>
 
-            <div className="flex items-center">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="20" 
-                height="20" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="h-5 w-5 mr-2 text-muted-foreground"
-              >
-                <rect x="2" y="3" width="20" height="14" rx="2" />
-                <line x1="8" y1="21" x2="16" y2="21" />
-                <line x1="12" y1="17" x2="12" y2="21" />
-              </svg>
-              <div>
-                <p className="text-sm font-medium">Airbyte Destination</p>
-                <p className="text-sm text-muted-foreground">
-                  {tenant.airbyte_destination_id ? `ID: ${tenant.airbyte_destination_id.substring(0, 8)}...` : "Pendente de configuração"}
-                </p>
-              </div>
-              {tenant.airbyte_destination_id && tenant.status === 'active' && <CheckCircle className="h-4 w-4 ml-auto text-green-500" />}
-              {!tenant.airbyte_destination_id && tenant.status === 'creating' && <Loader2 className="h-4 w-4 ml-auto animate-spin text-yellow-500" />}
-              {!tenant.airbyte_destination_id && tenant.status === 'error' && <AlertCircle className="h-4 w-4 ml-auto text-red-500" />}
-            </div>
-
             {tenant.status === 'creating' && (
               <div className="mt-4">
                 <p className="text-xs text-muted-foreground mb-1">Configuração em andamento...</p>
-                <Progress value={65} className="h-1" />
+                <Progress value={75} className="h-1" />
               </div>
             )}
           </div>
@@ -111,13 +83,6 @@ export const TenantInfo = () => {
               <div className="flex-1">
                 <Skeleton className="h-4 w-40 mb-1" />
                 <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Skeleton className="h-5 w-5 mr-2" />
-              <div className="flex-1">
-                <Skeleton className="h-4 w-36 mb-1" />
-                <Skeleton className="h-3 w-28" />
               </div>
             </div>
           </div>
