@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import FilePreview from "./FilePreview";
 import VoiceRecorder from "./VoiceRecorder";
-import { useMode } from "../contexts/ModeContext";
 
 interface ChatInputProps {
   onSendMessage: (message: string, file?: File) => void;
@@ -23,7 +22,6 @@ const ChatInput = ({
   onOpenSearch,
   messages
 }: ChatInputProps) => {
-  const { mode, toggleMode } = useMode();
   const [message, setMessage] = useState("");
   const [originalMessage, setOriginalMessage] = useState("");
   const [improvedMessage, setImprovedMessage] = useState("");
@@ -325,36 +323,6 @@ const ChatInput = ({
             className="hidden" 
             accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.csv" 
           />
-        </div>
-        
-        {/* Mode Toggle Button */}
-        <div className="ml-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={toggleMode}
-                  size="sm"
-                  variant="outline"
-                  className={cn(
-                    "rounded-full h-10 w-10 p-0 border transition-all flex items-center justify-center",
-                    mode === "business" 
-                      ? "bg-sightx-purple/10 text-sightx-purple border-sightx-purple/30" 
-                      : "bg-sightx-green/10 text-sightx-green border-sightx-green/30"
-                  )}
-                >
-                  {mode === "business" ? (
-                    <Briefcase className="h-5 w-5" />
-                  ) : (
-                    <User className="h-5 w-5" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Alternar para modo {mode === "business" ? "Pessoal" : "Empresarial"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
         
         {/* Helper text */}

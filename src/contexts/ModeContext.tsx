@@ -15,10 +15,10 @@ const ModeContext = createContext<ContextType | undefined>(undefined);
 
 export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Valores fixos para manter compatibilidade
-  const value = {
+  const value: ContextType = {
     mode: "personal" as const,
-    isBusiness: false,
-    isPersonal: true,
+    isBusiness: false as const,
+    isPersonal: true as const,
     setMode: () => {}, // Função vazia para compatibilidade
     toggleMode: () => {} // Função vazia para compatibilidade
   };

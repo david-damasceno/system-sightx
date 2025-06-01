@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, X, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMode } from "../contexts/ModeContext";
 import { Message } from "../types";
 
 interface MessageSearchProps {
@@ -14,7 +13,6 @@ interface MessageSearchProps {
 }
 
 const MessageSearch = ({ messages, onSearchResult, onClose }: MessageSearchProps) => {
-  const { mode } = useMode();
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState<string[]>([]);
   const [currentResultIndex, setCurrentResultIndex] = useState(-1);
@@ -70,7 +68,7 @@ const MessageSearch = ({ messages, onSearchResult, onClose }: MessageSearchProps
   return (
     <div className={cn(
       "fixed z-10 top-20 left-1/2 transform -translate-x-1/2 bg-background border shadow-lg rounded-lg p-2 w-[400px] max-w-[95vw] animate-slide-up",
-      mode === "business" ? "border-sightx-green/20" : "border-sightx-purple/20"
+      "border-sightx-purple/20"
     )}>
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

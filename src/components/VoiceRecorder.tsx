@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, Square, Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMode } from "../contexts/ModeContext";
 import { toast } from "sonner";
 
 interface VoiceRecorderProps {
@@ -12,7 +11,6 @@ interface VoiceRecorderProps {
 }
 
 const VoiceRecorder = ({ onRecordingComplete, onCancel }: VoiceRecorderProps) => {
-  const { mode } = useMode();
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -110,25 +108,19 @@ const VoiceRecorder = ({ onRecordingComplete, onCancel }: VoiceRecorderProps) =>
   return (
     <div className={cn(
       "flex items-center justify-between p-3 rounded-xl bg-muted/30 border animate-slide-up",
-      isRecording && (mode === "business" ? "border-sightx-green" : "border-sightx-purple")
+      isRecording && "border-sightx-purple"
     )}>
       {isRecording ? (
         <>
           <div className="flex items-center gap-2">
-            <div className={cn(
-              "h-3 w-3 rounded-full animate-pulse",
-              mode === "business" ? "bg-sightx-green" : "bg-sightx-purple"
-            )} />
+            <div className="h-3 w-3 rounded-full animate-pulse bg-sightx-purple" />
             <span className="text-sm font-medium">{formatTime(recordingTime)}</span>
           </div>
           
           <Button
             variant="ghost"
             size="sm"
-            className={cn(
-              "h-8 w-8 p-0 rounded-full",
-              mode === "business" ? "text-sightx-green hover:bg-sightx-green/10" : "text-sightx-purple hover:bg-sightx-purple/10"
-            )}
+            className="h-8 w-8 p-0 rounded-full text-sightx-purple hover:bg-sightx-purple/10"
             onClick={stopRecording}
           >
             <Square className="h-4 w-4" />
@@ -153,10 +145,7 @@ const VoiceRecorder = ({ onRecordingComplete, onCancel }: VoiceRecorderProps) =>
             
             <Button
               size="sm"
-              className={cn(
-                "h-8 w-8 p-0 rounded-full",
-                mode === "business" ? "bg-sightx-green hover:bg-sightx-green/90" : "bg-sightx-purple hover:bg-sightx-purple-light"
-              )}
+              className="h-8 w-8 p-0 rounded-full bg-sightx-purple hover:bg-sightx-purple-light"
               onClick={handleSend}
             >
               <Send className="h-4 w-4" />
@@ -180,10 +169,7 @@ const VoiceRecorder = ({ onRecordingComplete, onCancel }: VoiceRecorderProps) =>
             <Button
               variant="outline"
               size="sm"
-              className={cn(
-                "h-8 w-8 p-0 rounded-full",
-                mode === "business" ? "border-sightx-green/50 text-sightx-green hover:bg-sightx-green/10" : "border-sightx-purple/50 text-sightx-purple hover:bg-sightx-purple/10"
-              )}
+              className="h-8 w-8 p-0 rounded-full border-sightx-purple/50 text-sightx-purple hover:bg-sightx-purple/10"
               onClick={startRecording}
             >
               <Mic className="h-4 w-4" />
