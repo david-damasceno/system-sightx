@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMode } from "../contexts/ModeContext";
 import { 
@@ -39,44 +40,8 @@ interface Analysis {
   favorite: boolean;
 }
 
-// Dados de exemplo para análises
+// Dados de exemplo para análises pessoais
 const generateMockAnalyses = (): Analysis[] => {
-  const businessAnalyses = [
-    {
-      id: "1",
-      title: "Análise de Mercado Q1 2025",
-      description: "Avaliação das tendências do mercado para o primeiro trimestre de 2025",
-      content: "Esta análise aborda as principais tendências de mercado para o primeiro trimestre de 2025, incluindo crescimento de setores, oportunidades emergentes e riscos potenciais para investimentos.",
-      createdAt: new Date(2025, 3, 1),
-      updatedAt: new Date(2025, 3, 5),
-      tags: ["mercado", "finanças", "tendências"],
-      status: "complete" as const,
-      favorite: true
-    },
-    {
-      id: "2",
-      title: "Relatório de Desempenho Financeiro",
-      description: "Análise detalhada dos indicadores financeiros do último trimestre",
-      content: "Este relatório apresenta uma análise completa dos indicadores financeiros da empresa no último trimestre, incluindo ROI, margem de lucro e comparativos com períodos anteriores.",
-      createdAt: new Date(2025, 2, 15),
-      updatedAt: new Date(2025, 2, 20),
-      tags: ["finanças", "relatório", "desempenho"],
-      status: "complete" as const,
-      favorite: false
-    },
-    {
-      id: "3",
-      title: "Estudo de Viabilidade para Expansão",
-      description: "Análise de viabilidade para expansão de operações em novos mercados",
-      content: "Este estudo avalia a viabilidade de expandir as operações para três novos mercados, considerando fatores como demanda, concorrência, custos operacionais e potencial de retorno.",
-      createdAt: new Date(2025, 1, 10),
-      updatedAt: new Date(2025, 1, 12),
-      tags: ["expansão", "estratégia", "mercado"],
-      status: "pending" as const,
-      favorite: true
-    }
-  ];
-
   const personalAnalyses = [
     {
       id: "1",
@@ -113,12 +78,11 @@ const generateMockAnalyses = (): Analysis[] => {
     }
   ];
 
-  return localStorage.getItem("sightx-mode") === "business" ? businessAnalyses : personalAnalyses;
+  return personalAnalyses;
 };
 
 // Componente de filtro para as análises
 const AnalysisFilter = ({ onFilterChange }: { onFilterChange: (filter: string) => void }) => {
-  const { mode } = useMode();
   const [activeFilter, setActiveFilter] = useState("all");
   
   const handleFilterChange = (filter: string) => {
@@ -132,11 +96,7 @@ const AnalysisFilter = ({ onFilterChange }: { onFilterChange: (filter: string) =
         variant={activeFilter === "all" ? "default" : "outline"} 
         size="sm"
         className={cn(
-          activeFilter === "all" && (
-            mode === "business" 
-              ? "bg-sightx-green hover:bg-sightx-green/90" 
-              : "bg-sightx-purple hover:bg-sightx-purple/90"
-          )
+          activeFilter === "all" && "bg-sightx-purple hover:bg-sightx-purple/90"
         )}
         onClick={() => handleFilterChange("all")}
       >
@@ -146,11 +106,7 @@ const AnalysisFilter = ({ onFilterChange }: { onFilterChange: (filter: string) =
         variant={activeFilter === "favorites" ? "default" : "outline"} 
         size="sm"
         className={cn(
-          activeFilter === "favorites" && (
-            mode === "business" 
-              ? "bg-sightx-green hover:bg-sightx-green/90" 
-              : "bg-sightx-purple hover:bg-sightx-purple/90"
-          )
+          activeFilter === "favorites" && "bg-sightx-purple hover:bg-sightx-purple/90"
         )}
         onClick={() => handleFilterChange("favorites")}
       >
@@ -161,11 +117,7 @@ const AnalysisFilter = ({ onFilterChange }: { onFilterChange: (filter: string) =
         variant={activeFilter === "recent" ? "default" : "outline"} 
         size="sm"
         className={cn(
-          activeFilter === "recent" && (
-            mode === "business" 
-              ? "bg-sightx-green hover:bg-sightx-green/90" 
-              : "bg-sightx-purple hover:bg-sightx-purple/90"
-          )
+          activeFilter === "recent" && "bg-sightx-purple hover:bg-sightx-purple/90"
         )}
         onClick={() => handleFilterChange("recent")}
       >
@@ -176,11 +128,7 @@ const AnalysisFilter = ({ onFilterChange }: { onFilterChange: (filter: string) =
         variant={activeFilter === "complete" ? "default" : "outline"} 
         size="sm"
         className={cn(
-          activeFilter === "complete" && (
-            mode === "business" 
-              ? "bg-sightx-green hover:bg-sightx-green/90" 
-              : "bg-sightx-purple hover:bg-sightx-purple/90"
-          )
+          activeFilter === "complete" && "bg-sightx-purple hover:bg-sightx-purple/90"
         )}
         onClick={() => handleFilterChange("complete")}
       >
@@ -191,11 +139,7 @@ const AnalysisFilter = ({ onFilterChange }: { onFilterChange: (filter: string) =
         variant={activeFilter === "pending" ? "default" : "outline"} 
         size="sm"
         className={cn(
-          activeFilter === "pending" && (
-            mode === "business" 
-              ? "bg-sightx-green hover:bg-sightx-green/90" 
-              : "bg-sightx-purple hover:bg-sightx-purple/90"
-          )
+          activeFilter === "pending" && "bg-sightx-purple hover:bg-sightx-purple/90"
         )}
         onClick={() => handleFilterChange("pending")}
       >
@@ -206,11 +150,7 @@ const AnalysisFilter = ({ onFilterChange }: { onFilterChange: (filter: string) =
         variant={activeFilter === "archived" ? "default" : "outline"} 
         size="sm"
         className={cn(
-          activeFilter === "archived" && (
-            mode === "business" 
-              ? "bg-sightx-green hover:bg-sightx-green/90" 
-              : "bg-sightx-purple hover:bg-sightx-purple/90"
-          )
+          activeFilter === "archived" && "bg-sightx-purple hover:bg-sightx-purple/90"
         )}
         onClick={() => handleFilterChange("archived")}
       >
@@ -235,8 +175,6 @@ const AnalysisCard = ({
   onOpenAnalysis: (analysis: Analysis) => void,
   onChangeStatus: (id: string, status: "complete" | "pending" | "archived") => void
 }) => {
-  const { mode } = useMode();
-  
   // Formatar data
   const formatDate = (date: Date | string) => {
     // Verifica se a data é válida antes de formatar
@@ -410,7 +348,6 @@ const AnalysisDetailDialog = ({
   onSave, 
   onDelete 
 }: AnalysisDetailDialogProps) => {
-  const { mode } = useMode();
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -497,9 +434,7 @@ const AnalysisDetailDialog = ({
                 variant="outline" 
                 size="sm" 
                 onClick={() => setIsEditing(true)}
-                className={cn(
-                  mode === "business" ? "text-sightx-green" : "text-sightx-purple"
-                )}
+                className="text-sightx-purple"
               >
                 Editar
               </Button>
@@ -587,10 +522,7 @@ const AnalysisDetailDialog = ({
                   <Button 
                     onClick={handleAddTag}
                     variant="outline"
-                    className={cn(
-                      "whitespace-nowrap",
-                      mode === "business" ? "text-sightx-green" : "text-sightx-purple"
-                    )}
+                    className="whitespace-nowrap text-sightx-purple"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar
@@ -643,11 +575,7 @@ const AnalysisDetailDialog = ({
                 Cancelar
               </Button>
               <Button 
-                className={cn(
-                  mode === "business" 
-                    ? "bg-sightx-green hover:bg-sightx-green/90" 
-                    : "bg-sightx-purple hover:bg-sightx-purple/90"
-                )}
+                className="bg-sightx-purple hover:bg-sightx-purple/90"
                 onClick={handleSave}
               >
                 Salvar Alterações
@@ -687,7 +615,6 @@ interface NewAnalysisFormProps {
 }
 
 const NewAnalysisForm = ({ isOpen, onClose, onSave }: NewAnalysisFormProps) => {
-  const { mode } = useMode();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
@@ -813,10 +740,7 @@ const NewAnalysisForm = ({ isOpen, onClose, onSave }: NewAnalysisFormProps) => {
               <Button 
                 onClick={handleAddTag}
                 variant="outline"
-                className={cn(
-                  "whitespace-nowrap",
-                  mode === "business" ? "text-sightx-green" : "text-sightx-purple"
-                )}
+                className="whitespace-nowrap text-sightx-purple"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Adicionar
@@ -830,11 +754,7 @@ const NewAnalysisForm = ({ isOpen, onClose, onSave }: NewAnalysisFormProps) => {
             Cancelar
           </Button>
           <Button 
-            className={cn(
-              mode === "business" 
-                ? "bg-sightx-green hover:bg-sightx-green/90" 
-                : "bg-sightx-purple hover:bg-sightx-purple/90"
-            )}
+            className="bg-sightx-purple hover:bg-sightx-purple/90"
             onClick={handleSave}
           >
             Salvar Análise
@@ -849,7 +769,7 @@ const NewAnalysisForm = ({ isOpen, onClose, onSave }: NewAnalysisFormProps) => {
 const Analysis = () => {
   const { mode } = useMode();
   const [analyses, setAnalyses] = useState<Analysis[]>(() => {
-    const saved = localStorage.getItem(`sightx-analyses-${mode}`);
+    const saved = localStorage.getItem('sightx-analyses-personal');
     return saved ? JSON.parse(saved) : generateMockAnalyses();
   });
   const [filteredAnalyses, setFilteredAnalyses] = useState<Analysis[]>(analyses);
@@ -859,9 +779,9 @@ const Analysis = () => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   
-  // Atualizar análises quando o modo mudar
+  // Atualizar análises quando o componente carregar
   useEffect(() => {
-    const saved = localStorage.getItem(`sightx-analyses-${mode}`);
+    const saved = localStorage.getItem('sightx-analyses-personal');
     
     if (saved) {
       try {
@@ -874,16 +794,16 @@ const Analysis = () => {
     } else {
       setAnalyses(generateMockAnalyses());
     }
-  }, [mode]);
+  }, []);
   
   // Atualizar localStorage quando análises mudar
   useEffect(() => {
     try {
-      localStorage.setItem(`sightx-analyses-${mode}`, JSON.stringify(analyses));
+      localStorage.setItem('sightx-analyses-personal', JSON.stringify(analyses));
     } catch (error) {
       console.error("Erro ao salvar no localStorage:", error);
     }
-  }, [analyses, mode]);
+  }, [analyses]);
   
   // Filtrar análises baseado na busca e filtro ativo
   useEffect(() => {
@@ -1000,7 +920,7 @@ const Analysis = () => {
     const dataStr = JSON.stringify(analyses, null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
     
-    const exportFileDefaultName = `sightx-analises-${mode}-${new Date().toISOString().slice(0, 10)}.json`;
+    const exportFileDefaultName = `sightx-analises-pessoais-${new Date().toISOString().slice(0, 10)}.json`;
     
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
@@ -1015,18 +935,10 @@ const Analysis = () => {
       {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className={cn(
-            "p-2 rounded-lg",
-            mode === "business" ? "bg-sightx-green/10" : "bg-sightx-purple/10"
-          )}>
-            <BarChart className={cn(
-              "h-6 w-6",
-              mode === "business" ? "text-sightx-green" : "text-sightx-purple"
-            )} />
+          <div className="p-2 rounded-lg bg-sightx-purple/10">
+            <BarChart className="h-6 w-6 text-sightx-purple" />
           </div>
-          <h1 className="text-2xl font-bold">
-            {mode === "business" ? "Análises Empresariais" : "Análises Pessoais"}
-          </h1>
+          <h1 className="text-2xl font-bold">Análises Pessoais</h1>
         </div>
         
         <div className="flex gap-2">
@@ -1040,12 +952,7 @@ const Analysis = () => {
           </Button>
           
           <Button 
-            className={cn(
-              "flex items-center gap-2",
-              mode === "business" 
-                ? "bg-sightx-green hover:bg-sightx-green/90" 
-                : "bg-sightx-purple hover:bg-sightx-purple/90"
-            )}
+            className="flex items-center gap-2 bg-sightx-purple hover:bg-sightx-purple/90"
             onClick={() => setIsNewAnalysisOpen(true)}
           >
             <Plus className="h-4 w-4" />
@@ -1146,14 +1053,8 @@ const Analysis = () => {
       <div className="space-y-6">
         {filteredAnalyses.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 bg-muted/30 rounded-lg border border-dashed">
-            <div className={cn(
-              "w-16 h-16 rounded-full flex items-center justify-center mb-4",
-              mode === "business" ? "bg-sightx-green/10" : "bg-sightx-purple/10"
-            )}>
-              <FileText className={cn(
-                "h-8 w-8",
-                mode === "business" ? "text-sightx-green" : "text-sightx-purple"
-              )} />
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-sightx-purple/10">
+              <FileText className="h-8 w-8 text-sightx-purple" />
             </div>
             <h3 className="text-lg font-medium mb-2">Nenhuma análise encontrada</h3>
             <p className="text-muted-foreground text-center max-w-md mb-6">
@@ -1168,11 +1069,7 @@ const Analysis = () => {
                 setActiveFilter("all");
                 setIsNewAnalysisOpen(true);
               }}
-              className={cn(
-                mode === "business" 
-                  ? "bg-sightx-green hover:bg-sightx-green/90" 
-                  : "bg-sightx-purple hover:bg-sightx-purple/90"
-              )}
+              className="bg-sightx-purple hover:bg-sightx-purple/90"
             >
               <Plus className="h-4 w-4 mr-2" />
               {searchTerm ? "Limpar Filtros e Criar Nova" : "Criar Primeira Análise"}
