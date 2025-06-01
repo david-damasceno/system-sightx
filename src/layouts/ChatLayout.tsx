@@ -1,20 +1,15 @@
 
-import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Sidebar from "../components/Sidebar";
-import { useMode } from "../contexts/ModeContext";
-import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 
 const ChatLayout = () => {
-  const { isAuthenticated, isLoading, tenant, user } = useAuth();
-  const { mode } = useMode();
+  const { isAuthenticated, isLoading, tenant } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState("Erro ao configurar o ambiente. Tente novamente mais tarde.");
   const [setupProgress, setSetupProgress] = useState(0);
@@ -97,7 +92,6 @@ const ChatLayout = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Remover completamente a tela de carregamento e mostrar diretamente a interface
   return (
     <>
       <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>

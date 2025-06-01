@@ -2,16 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { useMode } from "../contexts/ModeContext";
 import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import MessageSearch from "../components/MessageSearch";
 import useChat from "../hooks/useChat";
-import { Briefcase, User, Search, Download, Share2 } from "lucide-react";
+import { Download, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -19,8 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const ChatWindow = () => {
   const { id } = useParams();
   const { user } = useAuth();
-  const { mode } = useMode();
-  const { messages, sendMessage, isProcessing, aiTyping, chatSession, chatHistory } = useChat(id);
+  const { messages, sendMessage, isProcessing, aiTyping, chatSession } = useChat(id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
