@@ -429,9 +429,8 @@ const useChat = (existingChatId?: string) => {
       let fileComment = "";
       
       if (file) {
-        fileComment = mode === "business"
-          ? `\n\nNotei que você anexou um documento empresarial "${file.name}". Vou analisar seu conteúdo do ponto de vista comercial.`
-          : `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
+        // Sempre usar comentário pessoal já que o modo é sempre pessoal
+        fileComment = `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
       }
       
       console.log("Chamando Azure OpenAI API para responder à mensagem");

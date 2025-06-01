@@ -5,7 +5,7 @@ import { useMode } from "../contexts/ModeContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ChatSession } from "../types";
-import { Briefcase, MessageSquare, User, Trash, Trash2 } from "lucide-react";
+import { MessageSquare, User, Trash, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -31,7 +31,7 @@ const ChatHistory = () => {
   const [displayChatHistory, setDisplayChatHistory] = useState<ChatSession[]>([]);
 
   useEffect(() => {
-    // Filtrar histórico de chat baseado no modo atual
+    // Sempre exibir todo o histórico de chat (já que só há modo pessoal)
     if (chatHistory) {
       setDisplayChatHistory([...chatHistory]);
     }
@@ -115,15 +115,8 @@ const ChatHistory = () => {
                 className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center",
-                    mode === "business" ? "bg-sightx-purple/10" : "bg-sightx-green/10"
-                  )}>
-                    {mode === "business" ? (
-                      <Briefcase className={cn("h-5 w-5", "text-sightx-purple")} />
-                    ) : (
-                      <User className={cn("h-5 w-5", "text-sightx-green")} />
-                    )}
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-sightx-purple/10">
+                    <User className="h-5 w-5 text-sightx-purple" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium truncate">{chat.title}</h3>
