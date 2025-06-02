@@ -3,27 +3,22 @@ import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, AlertCircle, Database, FolderOpen } from "lucide-react";
+import { CheckCircle, AlertCircle, Database, FolderOpen } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 
 export const TenantInfo = () => {
   const { tenant, user } = useAuth();
 
   // Mostrar badge de acordo com o status
   let statusBadge;
-  let progressValue = 0;
 
-  if (tenant?.status === 'creating') {
-    statusBadge = <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800">Em configuração</Badge>;
-    progressValue = 50;
-  } else if (tenant?.status === 'active') {
+  if (tenant?.status === 'active') {
     statusBadge = <Badge variant="outline" className="ml-2 bg-green-100 text-green-800">Ativo</Badge>;
-    progressValue = 100;
   } else if (tenant?.status === 'error') {
     statusBadge = <Badge variant="outline" className="ml-2 bg-red-100 text-red-800">Erro</Badge>;
-    progressValue = 25;
+  } else {
+    statusBadge = <Badge variant="outline" className="ml-2 bg-gray-100 text-gray-800">Configurando</Badge>;
   }
 
   return (
@@ -50,7 +45,6 @@ export const TenantInfo = () => {
                 <p className="text-sm text-muted-foreground">{tenant.schema_name}</p>
               </div>
               {tenant.status === 'active' && <CheckCircle className="h-4 w-4 ml-auto text-green-500" />}
-              {tenant.status === 'creating' && <Loader2 className="h-4 w-4 ml-auto animate-spin text-yellow-500" />}
               {tenant.status === 'error' && <AlertCircle className="h-4 w-4 ml-auto text-red-500" />}
             </div>
 
@@ -59,20 +53,12 @@ export const TenantInfo = () => {
               <div>
                 <p className="text-sm font-medium">Pasta de armazenamento</p>
                 <p className="text-sm text-muted-foreground">
-                  {tenant.storage_folder || "Pendente de configuração"}
+                  {tenant.storage_folder || "Configurando..."}
                 </p>
               </div>
               {tenant.storage_folder && tenant.status === 'active' && <CheckCircle className="h-4 w-4 ml-auto text-green-500" />}
-              {!tenant.storage_folder && tenant.status === 'creating' && <Loader2 className="h-4 w-4 ml-auto animate-spin text-yellow-500" />}
-              {!tenant.storage_folder && tenant.status === 'error' && <AlertCircle className="h-4 w-4 ml-auto text-red-500" />}
+              {tenant.status === 'error' && <AlertCircle className="h-4 w-4 ml-auto text-red-500" />}
             </div>
-
-            {tenant.status === 'creating' && (
-              <div className="mt-4">
-                <p className="text-xs text-muted-foreground mb-1">Configuração em andamento...</p>
-                <Progress value={progressValue} className="h-1" />
-              </div>
-            )}
 
             {tenant.status === 'error' && tenant.error_message && (
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">

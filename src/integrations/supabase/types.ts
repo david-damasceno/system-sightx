@@ -117,6 +117,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      setup_tenant_complete: {
+        Args: { user_id_param: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

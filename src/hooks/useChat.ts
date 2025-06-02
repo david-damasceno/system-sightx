@@ -46,7 +46,7 @@ const useChat = (existingChatId?: string) => {
             title: "Nova conversa",
             messages: [{
               id: uuidv4(),
-              content: "Bem-vindo ao SightX! Seu ambiente ainda está sendo configurado. Você poderá usar todas as funcionalidades assim que a configuração for concluída.",
+              content: "Bem-vindo ao SightX! Você já pode começar a usar o sistema. Se houver algum problema, por favor nos informe.",
               senderId: "ai",
               timestamp: new Date(),
               isAI: true
@@ -302,7 +302,7 @@ const useChat = (existingChatId?: string) => {
       // Verificar se o tenant está configurado e ativo
       if (!tenant || tenant.status !== 'active') {
         console.warn("Tenant não está ativo, usando resposta de fallback");
-        return "Olá! Seu ambiente SightX ainda está sendo configurado. Por favor, aguarde alguns instantes enquanto preparamos tudo para você. Em breve, você poderá conversar normalmente com nossa IA!";
+        return "Olá! Estou aqui para ajudá-lo. Como posso assisti-lo hoje? Seu ambiente está sendo finalizado, mas já podemos conversar normalmente!";
       }
       
       // Preparar o formato de mensagens para a API

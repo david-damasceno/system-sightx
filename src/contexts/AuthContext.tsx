@@ -39,7 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [activationInProgress, setActivationInProgress] = useState(false);
   const { toast } = useToast();
 
   const fetchTenant = async (userId: string) => {
@@ -65,160 +64,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const activateTenant = async (tenantId: string) => {
-    // Evitar múltiplas chamadas simultâneas
-    if (activationInProgress) {
-      console.log("Ativação já em andamento, ignorando chamada duplicada");
-      return;
-    }
-
-    try {
-      setActivationInProgress(true);
-      console.log("Iniciando ativação do tenant:", tenantId);
-      
-      // Verificar status atual do tenant
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('status')
-        .eq('id', tenantId)
-        .single();
-
-      // Verificar primeiro se houve erro na consulta
-      if (tenantError) {
-        console.error("Erro ao verificar o status do tenant:", tenantError);
-        setActivationInProgress(false);
-        return;
-      }
-
-      if (tenantData && tenantData.status === 'active') {
-        console.log("Tenant já está ativo");
-        setActivationInProgress(false);
-        return;
-      }
-      
-      console.log("Chamando função setup-tenant...");
-      
-      // Atualizar o status do tenant para 'creating' antes de chamar a função
-      try {
-        const { error: updateError } = await supabase
-          .from('tenants')
-          .update({ 
-            status: 'creating', 
-            updated_at: new Date().toISOString(),
-            error_message: null
-          })
-          .eq('id', tenantId);
-          
-        if (updateError) {
-          console.error("Erro ao atualizar status do tenant para 'creating':", updateError);
-          // Continuamos mesmo com erro no update
-        }
-      } catch (updateErr) {
-        console.error("Erro ao atualizar status para 'creating':", updateErr);
-        // Continuamos mesmo com erro
-      }
-
-      // Adicionar um timeout para garantir que a função não fique travada
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout na ativação do tenant")), 30000)
-      );
-
-      // Chamar a função Edge para configurar o tenant
-      const functionPromise = supabase.functions.invoke('setup-tenant', {
-        body: { tenantId }
-      });
-
-      // Usar Promise.race para implementar timeout
-      const { data, error } = await Promise.race([
-        functionPromise,
-        timeoutPromise
-      ]) as any;
-
-      console.log("Resposta da função setup-tenant:", data, error);
-
-      if (error) {
-        console.error("Erro ao ativar tenant:", error);
-        
-        await supabase
-          .from('tenants')
-          .update({ 
-            status: 'error', 
-            updated_at: new Date().toISOString(),
-            error_message: error.message || "Erro ao configurar o ambiente."
-          })
-          .eq('id', tenantId);
-        
-        await fetchTenant(user?.id || '');
-        
-        toast({
-          variant: "destructive",
-          title: "Erro na configuração",
-          description: error.message || "Erro ao configurar o ambiente.",
-        });
-        
-        setActivationInProgress(false);
-        return;
-      }
-
-      // Tratar resultado da função
-      if (data && data.success) {
-        console.log("Tenant ativado com sucesso:", data);
-        
-        toast({
-          title: "Configuração concluída",
-          description: "Seu ambiente foi configurado com sucesso.",
-        });
-        
-        // Buscar tenant atualizado
-        await fetchTenant(user?.id || '');
-      } else {
-        console.error("Falha ao ativar tenant:", data?.error || "Razão desconhecida");
-        
-        // Atualizar status para erro
-        await supabase
-          .from('tenants')
-          .update({ 
-            status: 'error', 
-            updated_at: new Date().toISOString(),
-            error_message: data?.error || "Erro ao configurar o ambiente."
-          })
-          .eq('id', tenantId);
-        
-        // Buscar tenant com erro
-        await fetchTenant(user?.id || '');
-        
-        toast({
-          variant: "destructive",
-          title: "Erro na configuração",
-          description: data?.error || "Erro ao configurar o ambiente.",
-        });
-      }
-    } catch (error: any) {
-      console.error("Exceção ao ativar tenant:", error);
-      
-      // Registrar erro no tenant
-      await supabase
-        .from('tenants')
-        .update({ 
-          status: 'error', 
-          updated_at: new Date().toISOString(),
-          error_message: error.message || "Erro ao configurar o ambiente."
-        })
-        .eq('id', tenantId);
-      
-      // Buscar tenant com erro
-      await fetchTenant(user?.id || '');
-      
-      toast({
-        variant: "destructive",
-        title: "Erro na configuração",
-        description: error.message || "Erro ao configurar o ambiente.",
-      });
-    } finally {
-      setActivationInProgress(false);
-    }
-  };
-
   // Efeito para monitorar mudanças na autenticação
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -235,16 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(userData);
           
           // Buscar tenant do usuário
-          const tenantData = await fetchTenant(session.user.id);
-          
-          // Ativar tenant se estiver em criação
-          if (tenantData && tenantData.status === 'creating' && !activationInProgress) {
-            console.log("Tenant em criação, ativando...");
-            // Use setTimeout para evitar conflitos com o evento de autenticação
-            setTimeout(() => {
-              activateTenant(tenantData.id);
-            }, 500);
-          }
+          await fetchTenant(session.user.id);
         } else {
           setUser(null);
           setTenant(null);
@@ -265,16 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(userData);
         
         // Buscar tenant do usuário
-        const tenantData = await fetchTenant(session.user.id);
-        
-        // Ativar tenant se estiver em criação
-        if (tenantData && tenantData.status === 'creating' && !activationInProgress) {
-          console.log("Tenant em criação, ativando...");
-          // Use setTimeout para evitar conflitos com o carregamento inicial
-          setTimeout(() => {
-            activateTenant(tenantData.id);
-          }, 500);
-        }
+        await fetchTenant(session.user.id);
       }
       setIsLoading(false);
     });
@@ -341,29 +168,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       toast({
         title: "Conta criada com sucesso",
-        description: "Estamos configurando seu ambiente. Isso pode levar alguns minutos.",
+        description: "Seu ambiente foi configurado automaticamente. Bem-vindo ao SightX!",
       });
 
-      // Verificar se o tenant foi criado automaticamente
-      console.log("Verificando se o tenant foi criado para o usuário:", data.user.id);
-      const tenantData = await fetchTenant(data.user.id);
-      
-      if (!tenantData) {
-        console.error("Tenant não foi criado automaticamente.");
-        toast({
-          variant: "destructive",
-          title: "Erro na criação do ambiente",
-          description: "Não foi possível criar seu ambiente. Tente novamente mais tarde.",
-        });
-        return;
-      }
-      
-      console.log("Tenant criado, iniciando ativação:", tenantData.id);
-      
-      // Iniciar ativação do tenant com pequeno atraso
-      setTimeout(() => {
-        activateTenant(tenantData.id);
-      }, 1000);
+      // O tenant já é criado automaticamente pelo trigger, então apenas aguardamos
+      console.log("Usuário criado com sucesso:", data.user?.id);
 
     } catch (error: any) {
       console.error("Erro ao criar conta:", error);

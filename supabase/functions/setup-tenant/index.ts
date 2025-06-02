@@ -8,86 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Função para configurar o Storage para um novo tenant
-async function setupStorage(supabaseClient, schemaName) {
-  console.log(`Configurando Storage para o schema: ${schemaName}`);
-  
-  try {
-    // Verificar se o bucket já existe
-    const { data: existingBuckets, error: checkError } = await supabaseClient
-      .storage
-      .listBuckets();
-      
-    if (checkError) {
-      console.error(`Erro ao verificar buckets existentes: ${checkError.message}`);
-      throw checkError;
-    }
-    
-    const bucketExists = existingBuckets.some(bucket => bucket.name === schemaName);
-    
-    if (!bucketExists) {
-      // Criar uma pasta para o tenant apenas se não existir
-      const { error: storageError } = await supabaseClient
-        .storage
-        .createBucket(schemaName, {
-          public: false
-        });
-      
-      if (storageError) {
-        console.error(`Erro ao criar bucket de storage: ${storageError.message}`);
-        throw storageError;
-      }
-      
-      console.log(`Bucket de storage criado com sucesso: ${schemaName}`);
-    } else {
-      console.log(`Bucket de storage já existe: ${schemaName}`);
-    }
-    
-    // Atualizar o registro do tenant com a referência da pasta
-    const { error: updateError } = await supabaseClient
-      .from('tenants')
-      .update({ storage_folder: schemaName })
-      .eq('schema_name', schemaName);
-    
-    if (updateError) {
-      console.error(`Erro ao atualizar registro do tenant: ${updateError.message}`);
-      throw updateError;
-    }
-    
-    console.log(`Storage configurado com sucesso para ${schemaName}`);
-    return { success: true, folder: schemaName };
-  } catch (error) {
-    console.error(`Erro ao configurar Storage: ${error.message}`);
-    return { success: false, error: error.message };
-  }
-}
-
-// Função para criar as tabelas de chat no esquema do tenant
-async function setupSchemaTables(supabaseClient, schemaName) {
-  console.log(`Configurando tabelas no schema: ${schemaName}`);
-  
-  try {
-    // Verificar se o esquema existe
-    const { error: schemaCheckError } = await supabaseClient.rpc(
-      'apply_tenant_tables',
-      { t_record: { schema_name: schemaName } }
-    );
-    
-    if (schemaCheckError) {
-      console.error(`Erro ao criar tabelas para ${schemaName}: ${schemaCheckError.message}`);
-      return { success: false, error: schemaCheckError.message };
-    }
-    
-    console.log(`Tabelas configuradas com sucesso para o schema ${schemaName}`);
-    return { success: true };
-  } catch (error) {
-    console.error(`Erro ao configurar tabelas para ${schemaName}: ${error.message}`);
-    return { success: false, error: error.message };
-  }
-}
-
-// Função principal de ativação do tenant
-async function activateTenant(tenantId, supabaseClient) {
+// Função principal de ativação do tenant usando a nova função do banco
+async function activateTenant(tenantId: string, supabaseClient) {
   console.log(`Ativando tenant ID: ${tenantId}`);
   
   try {
@@ -111,7 +33,7 @@ async function activateTenant(tenantId, supabaseClient) {
     
     // Verificar se o tenant já está ativo
     if (tenant.status === 'active') {
-      console.log(`Tenant ${tenant.schema_name} já está ativo, ignorando ativação`);
+      console.log(`Tenant ${tenant.schema_name} já está ativo`);
       return {
         success: true,
         message: "Tenant já está ativo",
@@ -119,46 +41,28 @@ async function activateTenant(tenantId, supabaseClient) {
       };
     }
     
-    // Verificar se o tenant já tem configurações parciais
-    let storageResult = { success: true };
-    if (!tenant.storage_folder) {
-      // Configurar o Storage apenas se ainda não estiver configurado
-      storageResult = await setupStorage(supabaseClient, tenant.schema_name);
-      if (!storageResult.success) {
-        throw new Error(`Falha ao configurar Storage: ${storageResult.error}`);
-      }
-    } else {
-      console.log(`Storage já configurado: ${tenant.storage_folder}`);
+    // Usar a nova função do banco para configurar tudo
+    console.log(`Configurando tenant usando função do banco...`);
+    const { data: setupResult, error: setupError } = await supabaseClient
+      .rpc('setup_tenant_complete', { user_id_param: tenant.user_id });
+    
+    if (setupError) {
+      console.error(`Erro na função setup_tenant_complete: ${setupError.message}`);
+      throw setupError;
     }
     
-    // Configurar tabelas no esquema do tenant
-    const tablesResult = await setupSchemaTables(supabaseClient, tenant.schema_name);
-    if (!tablesResult.success) {
-      throw new Error(`Falha ao configurar tabelas no esquema: ${tablesResult.error}`);
+    if (!setupResult.success) {
+      console.error(`Falha na configuração: ${setupResult.error}`);
+      throw new Error(setupResult.error);
     }
     
-    // Atualizar o registro do tenant com os resultados
-    const updates = {
-      status: 'active',
-      updated_at: new Date().toISOString(),
-      error_message: null
-    };
-    
-    const { error: updateError } = await supabaseClient
-      .from('tenants')
-      .update(updates)
-      .eq('id', tenantId);
-    
-    if (updateError) {
-      console.error(`Erro ao atualizar tenant: ${updateError.message}`);
-      throw updateError;
-    }
+    console.log(`Tenant configurado com sucesso:`, setupResult);
     
     return {
       success: true,
       tenant: tenant.schema_name,
-      storage: storageResult,
-      tables: tablesResult
+      storage: { success: true, folder: setupResult.storage_folder },
+      tables: { success: true }
     };
   } catch (error) {
     console.error(`Erro ao ativar tenant: ${error.message}`);
