@@ -13,12 +13,17 @@ export const TenantInfo = () => {
 
   // Mostrar badge de acordo com o status
   let statusBadge;
+  let progressValue = 0;
+
   if (tenant?.status === 'creating') {
     statusBadge = <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800">Em configuração</Badge>;
+    progressValue = 50;
   } else if (tenant?.status === 'active') {
     statusBadge = <Badge variant="outline" className="ml-2 bg-green-100 text-green-800">Ativo</Badge>;
+    progressValue = 100;
   } else if (tenant?.status === 'error') {
     statusBadge = <Badge variant="outline" className="ml-2 bg-red-100 text-red-800">Erro</Badge>;
+    progressValue = 25;
   }
 
   return (
@@ -65,7 +70,14 @@ export const TenantInfo = () => {
             {tenant.status === 'creating' && (
               <div className="mt-4">
                 <p className="text-xs text-muted-foreground mb-1">Configuração em andamento...</p>
-                <Progress value={75} className="h-1" />
+                <Progress value={progressValue} className="h-1" />
+              </div>
+            )}
+
+            {tenant.status === 'error' && tenant.error_message && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-xs text-red-800 font-medium">Erro na configuração:</p>
+                <p className="text-xs text-red-600 mt-1">{tenant.error_message}</p>
               </div>
             )}
           </div>

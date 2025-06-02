@@ -74,6 +74,7 @@ export type Database = {
       tenants: {
         Row: {
           created_at: string | null
+          error_message: string | null
           id: string
           schema_name: string
           status: string | null
@@ -83,6 +84,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          error_message?: string | null
           id?: string
           schema_name: string
           status?: string | null
@@ -92,6 +94,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          error_message?: string | null
           id?: string
           schema_name?: string
           status?: string | null
@@ -106,6 +109,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_tenant_tables: {
+        Args: { t_record: Json }
+        Returns: undefined
+      }
       get_current_tenant_schema: {
         Args: Record<PropertyKey, never>
         Returns: string

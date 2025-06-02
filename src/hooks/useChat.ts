@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
@@ -38,8 +37,8 @@ const useChat = (existingChatId?: string) => {
         return;
       }
       
-      // Se não temos schema do tenant ainda, usamos dados simulados
-      if (!tenant || !tenant.schema_name) {
+      // Se não temos schema do tenant ainda ou o tenant não está ativo, usamos dados simulados
+      if (!tenant || !tenant.schema_name || tenant.status !== 'active') {
         if (existingChatId) {
           // Simulamos uma única sessão com mensagens de boas-vindas
           const mockSession: ChatSession = {
@@ -47,7 +46,7 @@ const useChat = (existingChatId?: string) => {
             title: "Nova conversa",
             messages: [{
               id: uuidv4(),
-              content: "Bem-vindo ao chat! O sistema está sendo configurado em segundo plano.",
+              content: "Bem-vindo ao SightX! Seu ambiente ainda está sendo configurado. Você poderá usar todas as funcionalidades assim que a configuração for concluída.",
               senderId: "ai",
               timestamp: new Date(),
               isAI: true
@@ -162,8 +161,8 @@ const useChat = (existingChatId?: string) => {
 
   // Salvar nova sessão no esquema do usuário
   const saveNewSession = async (session: ChatSession) => {
-    if (!user || !tenant || !tenant.schema_name) {
-      console.log("Armazenamento temporário (tenant não configurado):", session);
+    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active') {
+      console.log("Armazenamento temporário (tenant não configurado ou não ativo):", session);
       return;
     }
     
@@ -188,7 +187,6 @@ const useChat = (existingChatId?: string) => {
           id: msg.id,
           session_id: session.id,
           content: msg.content,
-          // Correção aqui: mudamos de sender_id para senderId
           sender_id: msg.senderId,
           is_ai: msg.isAI,
           timestamp: msg.timestamp.toISOString(),
@@ -208,8 +206,8 @@ const useChat = (existingChatId?: string) => {
 
   // Atualizar sessão existente
   const updateSession = async (session: ChatSession, newMessages: Message[]) => {
-    if (!user || !tenant || !tenant.schema_name) {
-      console.log("Atualização temporária (tenant não configurado):", session, newMessages);
+    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active') {
+      console.log("Atualização temporária (tenant não configurado ou não ativo):", session, newMessages);
       return;
     }
     
@@ -232,7 +230,6 @@ const useChat = (existingChatId?: string) => {
           id: msg.id,
           session_id: session.id,
           content: msg.content,
-          // Correção aqui: mudamos de sender_id para senderId
           sender_id: msg.senderId,
           is_ai: msg.isAI,
           timestamp: msg.timestamp.toISOString(),
@@ -261,7 +258,7 @@ const useChat = (existingChatId?: string) => {
         setMessages([]);
       }
     }
-  }, [user, mode, tenant]);
+  }, [user, mode, tenant?.status]); // Adicionar tenant.status como dependência
 
   // Efeito de digitação do AI
   useEffect(() => {
@@ -302,10 +299,10 @@ const useChat = (existingChatId?: string) => {
   // Função para chamar a API do Azure OpenAI
   const callAzureOpenAI = async (content: string, messageHistory: Message[]): Promise<string> => {
     try {
-      // Verificar se o tenant está configurado e criar uma resposta de fallback caso não esteja
-      if (!tenant) {
-        console.warn("Tenant não está configurado, usando resposta de fallback");
-        return "Olá! Parece que seu ambiente ainda está sendo configurado. Por favor, aguarde um momento enquanto nossos sistemas são inicializados. Você poderá conversar normalmente em breve!";
+      // Verificar se o tenant está configurado e ativo
+      if (!tenant || tenant.status !== 'active') {
+        console.warn("Tenant não está ativo, usando resposta de fallback");
+        return "Olá! Seu ambiente SightX ainda está sendo configurado. Por favor, aguarde alguns instantes enquanto preparamos tudo para você. Em breve, você poderá conversar normalmente com nossa IA!";
       }
       
       // Preparar o formato de mensagens para a API
@@ -545,7 +542,7 @@ const useChat = (existingChatId?: string) => {
   };
 
   const deleteChat = async (chatId: string) => {
-    if (!user || !tenant || !tenant.schema_name) return;
+    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active') return;
     
     try {
       const schema = tenant.schema_name;
@@ -581,7 +578,7 @@ const useChat = (existingChatId?: string) => {
   };
 
   const clearAllChats = async () => {
-    if (!user || !tenant || !tenant.schema_name) return;
+    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active') return;
     
     try {
       const schema = tenant.schema_name;
