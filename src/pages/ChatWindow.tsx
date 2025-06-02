@@ -29,6 +29,7 @@ const ChatWindow = () => {
 
   // Send message handler
   const handleSendMessage = (content: string, file?: File) => {
+    console.log("ChatWindow: Enviando mensagem:", content);
     sendMessage(content, file);
     setAutoScroll(true);
   };
@@ -119,17 +120,34 @@ const ChatWindow = () => {
   return (
     <div className="flex flex-col h-screen">
       {/* Search overlay */}
-      {showSearch && <MessageSearch messages={messages} onSearchResult={handleSearchResult} onClose={() => setShowSearch(false)} />}
+      {showSearch && (
+        <MessageSearch 
+          messages={messages} 
+          onSearchResult={handleSearchResult} 
+          onClose={() => setShowSearch(false)} 
+        />
+      )}
       
       {/* Chat messages area */}
-      <ScrollArea className={cn(
-        "flex-1 p-4 pt-6 space-y-6", 
-        isMobile ? "px-2" : "px-4"
-      )} onScrollCapture={handleScroll} ref={scrollContainerRef}>
+      <ScrollArea 
+        className={cn(
+          "flex-1 p-4 pt-6 space-y-6", 
+          isMobile ? "px-2" : "px-4"
+        )} 
+        onScrollCapture={handleScroll} 
+        ref={scrollContainerRef}
+      >
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full flex-col gap-4 text-muted-foreground">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-sightx-purple/10 mb-4">
+              <img 
+                src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
+                alt="SightX Logo" 
+                className="h-10 w-10" 
+              />
+            </div>
             <p className="text-center text-lg font-medium">Bem-vindo ao SightX Chat</p>
-            <p className="text-center">Digite uma mensagem abaixo para iniciar a conversa.</p>
+            <p className="text-center">Digite uma mensagem abaixo para iniciar a conversa com nossa IA especializada em análise de dados.</p>
           </div>
         ) : (
           messages.map((message, index) => {
@@ -156,7 +174,11 @@ const ChatWindow = () => {
             isMobile ? "ml-4" : "ml-10"
           )}>
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sightx-purple">
-              <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-5 w-5" />
+              <img 
+                src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
+                alt="SightX Logo" 
+                className="h-5 w-5" 
+              />
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full animate-pulse bg-sightx-purple"></div>

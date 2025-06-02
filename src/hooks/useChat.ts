@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
@@ -39,29 +40,26 @@ const useChat = (existingChatId?: string) => {
       
       // Se não temos schema do tenant ainda ou o tenant não está ativo, usamos dados simulados
       if (!tenant || !tenant.schema_name || tenant.status !== 'active') {
+        console.log("Tenant não está ativo, criando sessão temporária");
         if (existingChatId) {
-          // Simulamos uma única sessão com mensagens de boas-vindas
+          // Simulamos uma única sessão vazia
           const mockSession: ChatSession = {
             id: existingChatId,
             title: "Nova conversa",
-            messages: [{
-              id: uuidv4(),
-              content: "Bem-vindo ao SightX! Você já pode começar a usar o sistema. Se houver algum problema, por favor nos informe.",
-              senderId: "ai",
-              timestamp: new Date(),
-              isAI: true
-            }],
+            messages: [],
             createdAt: new Date(),
             updatedAt: new Date()
           };
           setChatSession(mockSession);
-          setMessages(mockSession.messages);
+          setMessages([]);
         }
         return;
       }
       
       // Usando o esquema específico do usuário para carregar as sessões
       const schema = tenant.schema_name;
+      console.log(`Carregando sessões do schema: ${schema}`);
+      
       const { data: sessions, error } = await schemaTable(schema, 'chat_sessions')
         .select('*')
         .eq('user_id', user.id)
@@ -127,8 +125,9 @@ const useChat = (existingChatId?: string) => {
           if (existingChat) {
             setChatSession(existingChat);
             setMessages(existingChat.messages);
+            console.log(`Chat carregado: ${existingChat.title} com ${existingChat.messages.length} mensagens`);
           } else {
-            // Se não encontramos, pode ser um novo chat
+            // Se não encontramos, criamos um novo chat
             const newSession: ChatSession = {
               id: existingChatId,
               title: "Nova conversa",
@@ -138,13 +137,13 @@ const useChat = (existingChatId?: string) => {
             };
             setChatSession(newSession);
             setMessages([]);
+            console.log("Novo chat criado:", existingChatId);
           }
         }
       }
     } catch (error) {
       console.error("Erro ao carregar histórico de chat:", error);
       // Não mostramos toast de erro para não interromper a experiência
-      // Usamos um estado vazio
       if (existingChatId) {
         const mockSession: ChatSession = {
           id: existingChatId,
@@ -168,6 +167,7 @@ const useChat = (existingChatId?: string) => {
     
     try {
       const schema = tenant.schema_name;
+      console.log(`Salvando nova sessão no schema: ${schema}`);
       
       // Salvar sessão
       const { error: sessionError } = await schemaTable(schema, 'chat_sessions')
@@ -179,71 +179,65 @@ const useChat = (existingChatId?: string) => {
           updated_at: session.updatedAt.toISOString()
         });
         
-      if (sessionError) throw sessionError;
-      
-      // Salvar mensagens
-      if (session.messages.length > 0) {
-        const messagesToInsert = session.messages.map(msg => ({
-          id: msg.id,
-          session_id: session.id,
-          content: msg.content,
-          sender_id: msg.senderId,
-          is_ai: msg.isAI,
-          timestamp: msg.timestamp.toISOString(),
-          attachment: msg.attachment
-        }));
-        
-        const { error: messagesError } = await schemaTable(schema, 'chat_messages')
-          .insert(messagesToInsert);
-          
-        if (messagesError) throw messagesError;
+      if (sessionError) {
+        console.error("Erro ao salvar sessão:", sessionError);
+        return;
       }
+      
+      console.log("Sessão salva com sucesso");
     } catch (error) {
       console.error("Erro ao salvar sessão:", error);
-      // Não mostramos toast de erro para não interromper a experiência
     }
   };
 
-  // Atualizar sessão existente
-  const updateSession = async (session: ChatSession, newMessages: Message[]) => {
-    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active') {
-      console.log("Atualização temporária (tenant não configurado ou não ativo):", session, newMessages);
+  // Salvar mensagens no esquema do usuário
+  const saveMessages = async (sessionId: string, newMessages: Message[]) => {
+    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active' || newMessages.length === 0) {
+      console.log("Não é possível salvar mensagens:", { 
+        hasUser: !!user, 
+        hasTenant: !!tenant, 
+        hasSchema: !!tenant?.schema_name, 
+        isActive: tenant?.status === 'active',
+        messageCount: newMessages.length 
+      });
       return;
     }
     
     try {
       const schema = tenant.schema_name;
+      console.log(`Salvando ${newMessages.length} mensagens no schema: ${schema}`);
       
-      // Atualizar sessão
-      const { error: sessionError } = await schemaTable(schema, 'chat_sessions')
-        .update({
-          title: session.title,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', session.id);
-        
-      if (sessionError) throw sessionError;
+      const messagesToInsert = newMessages.map(msg => ({
+        id: msg.id,
+        session_id: sessionId,
+        content: msg.content,
+        sender_id: msg.senderId,
+        is_ai: msg.isAI,
+        timestamp: msg.timestamp.toISOString(),
+        attachment: msg.attachment || null
+      }));
       
-      // Inserir novas mensagens
-      if (newMessages.length > 0) {
-        const messagesToInsert = newMessages.map(msg => ({
-          id: msg.id,
-          session_id: session.id,
-          content: msg.content,
-          sender_id: msg.senderId,
-          is_ai: msg.isAI,
-          timestamp: msg.timestamp.toISOString(),
-          attachment: msg.attachment
-        }));
+      const { error: messagesError } = await schemaTable(schema, 'chat_messages')
+        .insert(messagesToInsert);
         
-        const { error: messagesError } = await schemaTable(schema, 'chat_messages')
-          .insert(messagesToInsert);
-          
-        if (messagesError) throw messagesError;
+      if (messagesError) {
+        console.error("Erro ao salvar mensagens:", messagesError);
+        return;
       }
+      
+      console.log("Mensagens salvas com sucesso");
+      
+      // Atualizar timestamp da sessão
+      const { error: updateError } = await schemaTable(schema, 'chat_sessions')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', sessionId);
+        
+      if (updateError) {
+        console.error("Erro ao atualizar sessão:", updateError);
+      }
+      
     } catch (error) {
-      console.error("Erro ao atualizar sessão:", error);
-      // Não mostramos toast de erro para não interromper a experiência
+      console.error("Erro ao salvar mensagens:", error);
     }
   };
 
@@ -258,7 +252,7 @@ const useChat = (existingChatId?: string) => {
         setMessages([]);
       }
     }
-  }, [user, mode, tenant?.status]); // Adicionar tenant.status como dependência
+  }, [user, mode, tenant?.status, existingChatId]);
 
   // Efeito de digitação do AI
   useEffect(() => {
@@ -299,11 +293,7 @@ const useChat = (existingChatId?: string) => {
   // Função para chamar a API do Azure OpenAI
   const callAzureOpenAI = async (content: string, messageHistory: Message[]): Promise<string> => {
     try {
-      // Verificar se o tenant está configurado e ativo
-      if (!tenant || tenant.status !== 'active') {
-        console.warn("Tenant não está ativo, usando resposta de fallback");
-        return "Olá! Estou aqui para ajudá-lo. Como posso assisti-lo hoje? Seu ambiente está sendo finalizado, mas já podemos conversar normalmente!";
-      }
+      console.log("Chamando Azure OpenAI Edge Function...");
       
       // Preparar o formato de mensagens para a API
       const formattedHistory = messageHistory.map(msg => ({
@@ -311,11 +301,10 @@ const useChat = (existingChatId?: string) => {
         isAI: msg.isAI,
       }));
 
-      // Log para debug
-      console.log("Chamando Azure OpenAI com:", { 
+      console.log("Histórico formatado:", { 
         messageCount: formattedHistory.length,
         mode: mode,
-        tenantId: tenant.id
+        tenantId: tenant?.id
       });
 
       // Chamar a Edge Function do Supabase
@@ -323,7 +312,7 @@ const useChat = (existingChatId?: string) => {
         body: {
           messages: formattedHistory,
           userMode: mode,
-          tenantId: tenant.id,
+          tenantId: tenant?.id,
           stream: false
         }
       });
@@ -346,23 +335,27 @@ const useChat = (existingChatId?: string) => {
       return data.message;
     } catch (e) {
       console.error("Erro no chat com Azure OpenAI:", e);
-      // Em caso de erro, mostramos um toast para o usuário
-      toast.error("Erro ao processar mensagem. Por favor, tente novamente.");
+      toast.error("Erro ao processar mensagem. Tentando novamente...");
       
-      // Retornar uma mensagem de erro amigável para mostrar ao usuário
-      return "Desculpe, ocorreu um problema ao processar sua mensagem. Isso pode acontecer quando o sistema ainda está sendo configurado. Por favor, tente novamente em alguns instantes.";
+      // Retornar uma mensagem de erro amigável
+      return "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente.";
     }
   };
 
   // Função principal para enviar mensagem
   const sendMessage = async (content: string, file?: File) => {
-    if (!user) return;
+    if (!user) {
+      toast.error("Você precisa estar logado para enviar mensagens");
+      return;
+    }
+
+    console.log("Enviando mensagem:", content);
 
     // Criar mensagem do usuário com anexo opcional
     const userMessage: Message = {
       id: uuidv4(),
       content,
-      senderId: "user",
+      senderId: user.id,
       timestamp: new Date(),
       isAI: false,
       ...(file && {
@@ -380,71 +373,56 @@ const useChat = (existingChatId?: string) => {
     
     if (needNewSession) {
       // Criar nova sessão
+      const sessionId = existingChatId || uuidv4();
       currentSession = {
-        id: uuidv4(),
+        id: sessionId,
         title: generateChatTitle(content),
         messages: [],
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       setChatSession(currentSession);
+      console.log("Nova sessão criada:", sessionId);
       
-      // Atualizar a sessão com a mensagem do usuário
-      currentSession.messages = [userMessage];
-      
-      // Atualizar mensagens
-      setMessages([userMessage]);
+      // Salvar nova sessão
+      await saveNewSession(currentSession);
       
       // Adicionar ao histórico local
       setChatHistory(prev => [currentSession!, ...prev]);
-      
-      // Salvar no esquema do usuário
-      saveNewSession(currentSession);
-    } else {
-      // Atualizar mensagens na sessão existente
-      currentSession.messages = [...currentSession.messages, userMessage];
-      setMessages(prev => [...prev, userMessage]);
     }
 
-    // Iniciar "pensamento" do AI
+    // Adicionar mensagem do usuário
+    const updatedMessages = [...(currentSession?.messages || []), userMessage];
+    setMessages(updatedMessages);
+    
+    // Atualizar sessão local
+    if (currentSession) {
+      currentSession.messages = updatedMessages;
+      currentSession.updatedAt = new Date();
+    }
+
+    // Iniciar processamento do AI
     setIsProcessing(true);
 
-    // Criar mensagem do AI vazia para iniciar
-    const aiMessage: Message = {
-      id: uuidv4(),
-      content: "",
-      senderId: "ai",
-      timestamp: new Date(),
-      isAI: true,
-    };
-
-    // Adicionar a mensagem com conteúdo vazio, iremos atualizá-la quando obtivermos a resposta
-    setMessages(prev => [...prev, aiMessage]);
-
     try {
-      let aiResponse = "";
-      let fileComment = "";
-      
-      if (file) {
-        // Sempre usar comentário pessoal já que o modo é sempre pessoal
-        fileComment = `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
-      }
-      
-      console.log("Chamando Azure OpenAI API para responder à mensagem");
+      console.log("Chamando Azure OpenAI para responder à mensagem");
       
       // Chamar a API do Azure OpenAI para obter resposta
-      const messageHistory = [...currentSession.messages];
+      let aiResponse = await callAzureOpenAI(content, updatedMessages);
       
-      try {
-        aiResponse = await callAzureOpenAI(content, messageHistory);
-        
-        if (aiResponse && fileComment) {
-          aiResponse += fileComment;
-        }
-      } catch (error) {
-        console.error("Erro ao chamar Azure OpenAI:", error);
-        aiResponse = "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente mais tarde ou verifique se seu ambiente está configurado corretamente.";
+      // Adicionar comentário sobre arquivo se houver
+      if (file) {
+        aiResponse += `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
       }
+      
+      // Criar mensagem do AI
+      const aiMessage: Message = {
+        id: uuidv4(),
+        content: aiResponse,
+        senderId: "ai",
+        timestamp: new Date(),
+        isAI: true,
+      };
       
       // Iniciar efeito de digitação
       setAiTyping({
@@ -454,82 +432,70 @@ const useChat = (existingChatId?: string) => {
         progress: 0
       });
       
-      // Configurar intervalo para verificar status de digitação e finalizar quando terminar
-      const checkTypingInterval = setInterval(() => {
-        if (!aiTyping.isTyping) {
-          clearInterval(checkTypingInterval);
-          
-          // Finalizar a mensagem com o conteúdo completo
-          const updatedAiMessage = {...aiMessage, content: aiResponse};
-          
-          setMessages(prev => 
-            prev.map(msg => msg.id === aiMessage.id 
-              ? updatedAiMessage 
-              : msg
-            )
-          );
-          
-          // Atualizar a sessão de chat
-          if (currentSession) {
-            const newMessages = [userMessage, updatedAiMessage];
-            const updatedSession = {
-              ...currentSession,
-              messages: [...currentSession.messages, updatedAiMessage],
-              updatedAt: new Date(),
-            };
-            
-            setChatSession(updatedSession);
-            
-            // Atualizar histórico de chat local
-            setChatHistory(prev => 
-              prev.map(chat => 
-                chat.id === updatedSession.id ? updatedSession : chat
-              )
-            );
-            
-            // Salvar no esquema do usuário
-            updateSession(currentSession, newMessages);
-          }
-          
-          setIsProcessing(false);
-        }
-      }, 100);
-    } catch (error) {
-      console.error("Erro ao processar mensagem:", error);
-      // Em caso de erro, adicionar mensagem de erro como resposta do AI
-      const errorMessage = "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente mais tarde.";
+      // Aguardar fim da digitação
+      const waitForTyping = () => {
+        return new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            setAiTyping(current => {
+              if (!current.isTyping) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+              return current;
+            });
+          }, 100);
+        });
+      };
       
-      // Atualizar a mensagem do AI com o erro
-      setMessages(prev => 
-        prev.map(msg => msg.id === aiMessage.id 
-          ? {...msg, content: errorMessage} 
-          : msg
-        )
-      );
+      await waitForTyping();
       
-      // Atualizar a sessão de chat
+      // Atualizar mensagens com resposta da IA
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+      
+      // Atualizar sessão local
       if (currentSession) {
-        const updatedAiMessage = {...aiMessage, content: errorMessage};
-        const newMessages = [userMessage, updatedAiMessage];
-        const updatedSession = {
-          ...currentSession,
-          messages: [...currentSession.messages, updatedAiMessage],
-          updatedAt: new Date(),
-        };
+        currentSession.messages = finalMessages;
+        currentSession.updatedAt = new Date();
         
-        setChatSession(updatedSession);
-        
-        // Atualizar histórico de chat local
+        // Atualizar histórico local
         setChatHistory(prev => 
           prev.map(chat => 
-            chat.id === updatedSession.id ? updatedSession : chat
+            chat.id === currentSession!.id ? currentSession! : chat
           )
         );
-        
-        // Salvar no esquema do usuário
-        updateSession(currentSession, newMessages);
       }
       
+      // Salvar as novas mensagens (usuário + AI)
+      await saveMessages(currentSession!.id, [userMessage, aiMessage]);
+      
+      console.log("Mensagem processada e salva com sucesso");
+      
+    } catch (error) {
+      console.error("Erro ao processar mensagem:", error);
+      
+      // Adicionar mensagem de erro como resposta do AI
+      const errorMessage: Message = {
+        id: uuidv4(),
+        content: "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente.",
+        senderId: "ai",
+        timestamp: new Date(),
+        isAI: true,
+      };
+      
+      const finalMessages = [...updatedMessages, errorMessage];
+      setMessages(finalMessages);
+      
+      // Atualizar sessão local
+      if (currentSession) {
+        currentSession.messages = finalMessages;
+        currentSession.updatedAt = new Date();
+      }
+      
+      // Salvar mensagens mesmo com erro
+      await saveMessages(currentSession!.id, [userMessage, errorMessage]);
+      
+    } finally {
       setIsProcessing(false);
     }
   };
