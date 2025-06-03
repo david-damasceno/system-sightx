@@ -340,34 +340,108 @@ const useChat = (existingChatId?: string) => {
         streaming: useStreaming
       });
 
-      const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
-        body: {
-          messages: formattedHistory,
-          userMode: mode,
-          tenantId: tenant?.id,
-          stream: useStreaming
+      if (useStreaming) {
+        // Usar streaming para chat normal
+        const response = await fetch(`${supabase.supabaseUrl}/functions/v1/azure-openai-chat`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabase.supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: formattedHistory,
+            userMode: mode,
+            tenantId: tenant?.id,
+            stream: true
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      });
 
-      if (error) {
-        console.error("Erro ao chamar Azure OpenAI via Edge Function:", error);
-        throw error;
+        if (!response.body) {
+          throw new Error("Response body is null");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedMessage = '';
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.content) {
+                    accumulatedMessage += data.content;
+                    
+                    // Atualizar estado de digitação
+                    setAiTyping(prev => ({
+                      ...prev,
+                      partialMessage: accumulatedMessage,
+                      fullMessage: accumulatedMessage,
+                      isTyping: true
+                    }));
+                  }
+                } catch (parseError) {
+                  console.error("Erro ao processar chunk:", parseError);
+                }
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+          // Finalizar digitação
+          setAiTyping(prev => ({
+            ...prev,
+            isTyping: false
+          }));
+        }
+
+        if (!accumulatedMessage) {
+          throw new Error("Nenhum conteúdo recebido do streaming");
+        }
+
+        return accumulatedMessage;
+      } else {
+        // Usar chamada não-streaming para melhoria de mensagem
+        const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
+          body: {
+            messages: formattedHistory,
+            userMode: mode,
+            tenantId: tenant?.id,
+            stream: false
+          }
+        });
+
+        if (error) {
+          console.error("Erro ao chamar Azure OpenAI via Edge Function:", error);
+          throw error;
+        }
+
+        if (!data || !data.message) {
+          console.error("Resposta inválida da Edge Function:", data);
+          throw new Error("Resposta inválida da API do Azure OpenAI");
+        }
+
+        console.log("Resposta da IA recebida com sucesso", {
+          messageLength: data.message.length,
+        });
+
+        return data.message;
       }
-
-      if (!data || !data.message) {
-        console.error("Resposta inválida da Edge Function:", data);
-        throw new Error("Resposta inválida da API do Azure OpenAI");
-      }
-
-      console.log("Resposta da IA recebida com sucesso", {
-        messageLength: data.message.length,
-      });
-
-      return data.message;
     } catch (e) {
       console.error("Erro no chat com Azure OpenAI:", e);
       toast.error("Erro ao processar mensagem. Tentando novamente...");
-      return "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente.";
+      throw e;
     }
   };
 
@@ -452,31 +526,6 @@ const useChat = (existingChatId?: string) => {
         timestamp: new Date(),
         isAI: true,
       };
-      
-      // Iniciar efeito de digitação
-      setAiTyping({
-        isTyping: true,
-        partialMessage: "",
-        fullMessage: aiResponse,
-        progress: 0
-      });
-      
-      // Aguardar fim da digitação
-      const waitForTyping = () => {
-        return new Promise<void>((resolve) => {
-          const checkInterval = setInterval(() => {
-            setAiTyping(current => {
-              if (!current.isTyping) {
-                clearInterval(checkInterval);
-                resolve();
-              }
-              return current;
-            });
-          }, 100);
-        });
-      };
-      
-      await waitForTyping();
       
       // Atualizar mensagens com resposta da IA
       const finalMessages = [...updatedMessages, aiMessage];

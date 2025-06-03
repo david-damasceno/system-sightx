@@ -108,11 +108,11 @@ Diretrizes para melhoria:
     const openaiRequestBody = {
       messages: formattedMessages,
       temperature: improveMessage ? 0.3 : (userMode === "business" ? 0.3 : 0.7),
-      top_p: 0.9, // Otimização para respostas mais focadas
-      frequency_penalty: 0.1, // Reduz repetições
-      presence_penalty: 0.1, // Encoraja variedade
-      max_tokens: improveMessage ? 500 : 2048, // Limite menor para melhorias
-      stream: stream && !improveMessage, // Streaming apenas para chat normal
+      top_p: 0.9,
+      frequency_penalty: 0.1,
+      presence_penalty: 0.1,
+      max_tokens: improveMessage ? 500 : 2048,
+      stream: stream && !improveMessage,
     };
 
     // Fazer a solicitação para a API do Azure OpenAI
@@ -141,7 +141,56 @@ Diretrizes para melhoria:
 
     // Se estivermos usando streaming (apenas para chat normal)
     if (stream && !improveMessage) {
-      return new Response(openaiResponse.body, {
+      console.log("Processando stream da Azure OpenAI");
+      
+      // Criar um stream processado que extrai apenas o conteúdo
+      const processedStream = new ReadableStream({
+        async start(controller) {
+          const reader = openaiResponse.body!.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+              
+              for (const line of lines) {
+                if (line.trim() === '') continue;
+                if (line.startsWith('data: ')) {
+                  const data = line.slice(6);
+                  if (data === '[DONE]') {
+                    controller.close();
+                    return;
+                  }
+                  
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                      // Enviar apenas o conteúdo processado
+                      const content = parsed.choices[0].delta.content;
+                      controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content })}\n\n`));
+                    }
+                  } catch (parseError) {
+                    console.error("Erro ao processar chunk do stream:", parseError);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Erro no processamento do stream:", error);
+            controller.error(error);
+          } finally {
+            reader.releaseLock();
+          }
+        }
+      });
+      
+      return new Response(processedStream, {
         headers: { 
           ...corsHeaders, 
           "Content-Type": "text/event-stream",

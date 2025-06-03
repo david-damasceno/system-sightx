@@ -21,7 +21,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
  * @returns Uma interface PostgrestQueryBuilder para a tabela
  */
 export const schemaTable = (schemaName: string, tableName: string) => {
-  // Utilizamos 'as any' para ignorar a verificação de tipos do TypeScript,
-  // já que estamos trabalhando com esquemas dinâmicos que não são conhecidos em tempo de compilação
+  // Corrigido: não adicionar "public." - o schema já é o correto
   return supabase.from(`${schemaName}.${tableName}` as any);
 };
