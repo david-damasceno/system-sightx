@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { SendHorizonal, Paperclip, X, Mic, Camera, Search, Lightbulb, Sparkles, RotateCcw, User, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,12 +7,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import FilePreview from "./FilePreview";
 import VoiceRecorder from "./VoiceRecorder";
+import useChat from "../hooks/useChat";
 
 interface ChatInputProps {
   onSendMessage: (message: string, file?: File) => void;
   isProcessing: boolean;
   onOpenSearch: () => void;
-  messages: any[]; // Replace with actual Message type
+  messages: any[];
 }
 
 const ChatInput = ({
@@ -32,6 +32,9 @@ const ChatInput = ({
   const [improvingMessage, setImprovingMessage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Hook para usar a função de melhoria
+  const { improveMessage: improveMessageAPI } = useChat();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -91,7 +94,8 @@ const ChatInput = ({
     toast.success("Áudio gravado com sucesso!");
   };
 
-  const improveMessage = () => {
+  // Função otimizada para melhorar mensagem usando Azure OpenAI
+  const improveMessage = async () => {
     if (!message.trim()) {
       toast.error("Digite uma mensagem para melhorar");
       return;
@@ -100,48 +104,24 @@ const ChatInput = ({
     setImprovingMessage(true);
     setOriginalMessage(message);
 
-    // Simulação de melhoria - em um caso real, você usaria uma API de IA
-    setTimeout(() => {
-      const improvedText = generateImprovedText(message);
+    try {
+      const improvedText = await improveMessageAPI(message);
       setImprovedMessage(improvedText);
       setMessage(improvedText);
       setIsImproved(true);
+      toast.success("Mensagem melhorada com IA!");
+    } catch (error) {
+      toast.error("Erro ao melhorar mensagem. Tente novamente.");
+      console.error("Erro na melhoria:", error);
+    } finally {
       setImprovingMessage(false);
-      toast.success("Mensagem melhorada com sucesso!");
-    }, 800);
+    }
   };
 
   const restoreOriginalMessage = () => {
     setMessage(originalMessage);
     setIsImproved(false);
     toast.info("Restaurada mensagem original");
-  };
-
-  // Simula uma melhoria de texto - em produção seria substituído por chamada a API
-  const generateImprovedText = (text: string) => {
-    // Simulação de melhoria - adiciona clareza e estrutura
-    let improved = text;
-
-    // Simula melhorias básicas
-    if (!text.trim().endsWith(".") && !text.trim().endsWith("?") && !text.trim().endsWith("!")) {
-      improved = improved.trim() + ".";
-    }
-
-    // Adiciona estrutura para diferentes tipos de entrada
-    if (text.toLowerCase().includes("como") || text.toLowerCase().includes("qual") || text.toLowerCase().includes("o que")) {
-      improved = "Gostaria de entender " + improved.charAt(0).toLowerCase() + improved.slice(1);
-    } else if (text.length < 20) {
-      improved = "Por favor, explique sobre " + improved;
-    } else {
-      improved = "Solicito informações detalhadas sobre: " + improved;
-    }
-
-    // Simula a adição de clareza e formalidade
-    improved = improved.replace(/muito/gi, "significativamente");
-    improved = improved.replace(/legal/gi, "interessante");
-    improved = improved.replace(/bom/gi, "eficaz");
-
-    return improved;
   };
 
   return (
@@ -178,7 +158,7 @@ const ChatInput = ({
             value={message} 
             onChange={e => setMessage(e.target.value)} 
             onKeyDown={handleKeyDown} 
-            placeholder="Escreva sua mensagem..." 
+            placeholder="Escreva sua mensagem para análise de negócios..." 
             className="pr-24 resize-none min-h-[56px] max-h-[200px] rounded-xl py-3.5 transition-all" 
             disabled={isProcessing || showVoiceRecorder || improvingMessage} 
             rows={1} 
@@ -274,7 +254,7 @@ const ChatInput = ({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Melhorar mensagem</p>
+                      <p>Melhorar com IA</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -328,15 +308,15 @@ const ChatInput = ({
         {/* Helper text */}
         <div className="mt-2 absolute bottom-1 left-[100px] flex justify-between items-center text-xs text-muted-foreground">
           <div>
-            <span className="opacity-70">Shift + Enter para nova linha</span>
+            <span className="opacity-70">Shift + Enter para nova linha • Contexto: Business</span>
           </div>
           <div className="flex gap-2">
             {isProcessing && <span className="animate-pulse">Processando...</span>}
-            {improvingMessage && <span className="animate-pulse">Melhorando mensagem...</span>}
+            {improvingMessage && <span className="animate-pulse">Melhorando com IA...</span>}
             {isImproved && !improvingMessage && (
               <span className="text-sightx-purple flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
-                Texto melhorado
+                Melhorado com IA
               </span>
             )}
           </div>

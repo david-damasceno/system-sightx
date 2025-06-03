@@ -31,7 +31,7 @@ serve(async (req) => {
           message: "A configuração do sistema ainda está em andamento. Por favor, tente novamente em alguns instantes." 
         }),
         {
-          status: 200, // Enviamos 200 para não mostrar erro, apenas a mensagem de fallback
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -39,10 +39,10 @@ serve(async (req) => {
 
     // Extrair dados da solicitação
     const requestData = await req.json();
-    const { messages, userMode, tenantId, stream = false } = requestData;
+    const { messages, userMode, tenantId, stream = false, improveMessage = false } = requestData;
 
     // Log para debugar multi-tenant
-    console.log(`Recebendo requisição para tenant: ${tenantId || 'default'}, modo: ${userMode}`);
+    console.log(`Recebendo requisição para tenant: ${tenantId || 'default'}, modo: ${userMode}, melhoria: ${improveMessage}`);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       console.error("Erro: Formato de mensagens inválido", { messages });
@@ -57,19 +57,42 @@ serve(async (req) => {
       );
     }
 
-    // Determinar o sistema prompt baseado no modo do usuário
-    const systemPrompt = userMode === "business"
-      ? "Você é um assistente de IA focado em negócios do SightX. Você oferece respostas profissionais e objetivas, com ênfase em dados e análises comerciais. Use linguagem formal e forneça insights orientados a negócios."
-      : "Você é um assistente de IA amigável do SightX. Você oferece respostas úteis e conversacionais, adaptadas para uso pessoal. Use linguagem casual mas respeitosa e mantenha um tom cordial.";
+    // Determinar o sistema prompt baseado no tipo de solicitação
+    let systemPrompt;
+    
+    if (improveMessage) {
+      systemPrompt = `Você é um especialista em comunicação empresarial do SightX. Sua função é melhorar mensagens para torná-las mais claras, profissionais e eficazes para o contexto de negócios.
+
+Diretrizes para melhoria:
+- Torne a linguagem mais formal e profissional
+- Adicione clareza e especificidade
+- Estruture melhor as ideias
+- Mantenha o sentido original da mensagem
+- Use terminologia apropriada para análise de dados e business intelligence
+- Retorne APENAS a mensagem melhorada, sem explicações adicionais`;
+    } else {
+      systemPrompt = "Você é um assistente de IA especializado em negócios do SightX. Você oferece respostas profissionais e objetivas, com ênfase em dados e análises comerciais. Use linguagem formal e forneça insights orientados a negócios, sempre focando em como transformar dados em decisões estratégicas.";
+    }
 
     // Preparar as mensagens para a API do Azure OpenAI
-    const formattedMessages = [
-      { role: "system", content: systemPrompt },
-      ...messages.map(msg => ({
-        role: msg.isAI ? "assistant" : "user",
-        content: msg.content,
-      })),
-    ];
+    let formattedMessages;
+    
+    if (improveMessage) {
+      // Para melhoria de mensagem, enviar apenas a última mensagem do usuário
+      const lastUserMessage = messages[messages.length - 1];
+      formattedMessages = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Melhore esta mensagem: "${lastUserMessage.content}"` }
+      ];
+    } else {
+      formattedMessages = [
+        { role: "system", content: systemPrompt },
+        ...messages.map(msg => ({
+          role: msg.isAI ? "assistant" : "user",
+          content: msg.content,
+        })),
+      ];
+    }
 
     // Debug log
     console.log("Enviando para Azure OpenAI:", {
@@ -77,18 +100,19 @@ serve(async (req) => {
       model: AZURE_OPENAI_MODEL,
       messageCount: formattedMessages.length,
       stream: stream,
-      tenantId: tenantId || 'default'
+      tenantId: tenantId || 'default',
+      improveMessage: improveMessage
     });
 
-    // Configurar a solicitação para a API do Azure OpenAI
+    // Configurar a solicitação para a API do Azure OpenAI com otimizações
     const openaiRequestBody = {
       messages: formattedMessages,
-      temperature: userMode === "business" ? 0.3 : 0.7,
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-      max_tokens: 2048,
-      stream: stream,
+      temperature: improveMessage ? 0.3 : (userMode === "business" ? 0.3 : 0.7),
+      top_p: 0.9, // Otimização para respostas mais focadas
+      frequency_penalty: 0.1, // Reduz repetições
+      presence_penalty: 0.1, // Encoraja variedade
+      max_tokens: improveMessage ? 500 : 2048, // Limite menor para melhorias
+      stream: stream && !improveMessage, // Streaming apenas para chat normal
     };
 
     // Fazer a solicitação para a API do Azure OpenAI
@@ -115,39 +139,9 @@ serve(async (req) => {
       );
     }
 
-    // Se estivermos usando streaming, passe o stream diretamente para o cliente
-    if (stream) {
-      // Transformar o stream da Azure API para o formato esperado pelo cliente
-      const transformedStream = new TransformStream();
-      const writer = transformedStream.writable.getWriter();
-      
-      // Processar o stream da API do Azure
-      const reader = openaiResponse.body?.getReader();
-      if (!reader) {
-        throw new Error("Stream não disponível na resposta");
-      }
-
-      // Função para processar o stream
-      (async () => {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              await writer.close();
-              break;
-            }
-            
-            // Decodificar os chunks e enviar para o cliente
-            const chunk = new TextDecoder().decode(value);
-            await writer.write(new TextEncoder().encode(chunk));
-          }
-        } catch (error) {
-          console.error("Erro ao processar stream:", error);
-          await writer.abort(error);
-        }
-      })();
-
-      return new Response(transformedStream.readable, {
+    // Se estivermos usando streaming (apenas para chat normal)
+    if (stream && !improveMessage) {
+      return new Response(openaiResponse.body, {
         headers: { 
           ...corsHeaders, 
           "Content-Type": "text/event-stream",
@@ -161,7 +155,8 @@ serve(async (req) => {
       console.log("Resposta da Azure OpenAI recebida:", {
         status: openaiResponse.status,
         hasChoices: data.choices && data.choices.length > 0,
-        tenantId: tenantId || 'default'
+        tenantId: tenantId || 'default',
+        improveMessage: improveMessage
       });
 
       if (!data.choices || data.choices.length === 0) {

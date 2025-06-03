@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
@@ -42,7 +41,6 @@ const useChat = (existingChatId?: string) => {
       if (!tenant || !tenant.schema_name || tenant.status !== 'active') {
         console.log("Tenant não está ativo, criando sessão temporária");
         if (existingChatId) {
-          // Simulamos uma única sessão vazia
           const mockSession: ChatSession = {
             id: existingChatId,
             title: "Nova conversa",
@@ -143,7 +141,6 @@ const useChat = (existingChatId?: string) => {
       }
     } catch (error) {
       console.error("Erro ao carregar histórico de chat:", error);
-      // Não mostramos toast de erro para não interromper a experiência
       if (existingChatId) {
         const mockSession: ChatSession = {
           id: existingChatId,
@@ -290,12 +287,44 @@ const useChat = (existingChatId?: string) => {
     };
   }, [aiTyping.isTyping]);
 
-  // Função para chamar a API do Azure OpenAI
-  const callAzureOpenAI = async (content: string, messageHistory: Message[]): Promise<string> => {
+  // Função para melhorar mensagem usando Azure OpenAI
+  const improveMessage = async (originalMessage: string): Promise<string> => {
+    try {
+      console.log("Melhorando mensagem com Azure OpenAI...");
+      
+      const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
+        body: {
+          messages: [{ content: originalMessage, isAI: false }],
+          userMode: mode,
+          tenantId: tenant?.id,
+          stream: false,
+          improveMessage: true
+        }
+      });
+
+      if (error) {
+        console.error("Erro ao melhorar mensagem:", error);
+        throw error;
+      }
+
+      if (!data || !data.message) {
+        throw new Error("Resposta inválida da API para melhoria de mensagem");
+      }
+
+      console.log("Mensagem melhorada com sucesso");
+      return data.message;
+    } catch (e) {
+      console.error("Erro ao melhorar mensagem:", e);
+      toast.error("Erro ao melhorar mensagem. Tentando novamente...");
+      throw e;
+    }
+  };
+
+  // Função otimizada para chamar a API do Azure OpenAI com streaming
+  const callAzureOpenAI = async (content: string, messageHistory: Message[], useStreaming: boolean = true): Promise<string> => {
     try {
       console.log("Chamando Azure OpenAI Edge Function...");
       
-      // Preparar o formato de mensagens para a API
       const formattedHistory = messageHistory.map(msg => ({
         content: msg.content,
         isAI: msg.isAI,
@@ -304,16 +333,16 @@ const useChat = (existingChatId?: string) => {
       console.log("Histórico formatado:", { 
         messageCount: formattedHistory.length,
         mode: mode,
-        tenantId: tenant?.id
+        tenantId: tenant?.id,
+        streaming: useStreaming
       });
 
-      // Chamar a Edge Function do Supabase
       const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
         body: {
           messages: formattedHistory,
           userMode: mode,
           tenantId: tenant?.id,
-          stream: false
+          stream: useStreaming
         }
       });
 
@@ -322,7 +351,6 @@ const useChat = (existingChatId?: string) => {
         throw error;
       }
 
-      // Verificar se temos uma resposta válida
       if (!data || !data.message) {
         console.error("Resposta inválida da Edge Function:", data);
         throw new Error("Resposta inválida da API do Azure OpenAI");
@@ -336,8 +364,6 @@ const useChat = (existingChatId?: string) => {
     } catch (e) {
       console.error("Erro no chat com Azure OpenAI:", e);
       toast.error("Erro ao processar mensagem. Tentando novamente...");
-      
-      // Retornar uma mensagem de erro amigável
       return "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente.";
     }
   };
@@ -587,6 +613,7 @@ const useChat = (existingChatId?: string) => {
     aiTyping,
     deleteChat,
     clearAllChats,
+    improveMessage, // Nova função exportada
   };
 };
 

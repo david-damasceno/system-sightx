@@ -1,12 +1,11 @@
 
 import React, { createContext, useContext } from "react";
 
-// Contexto simplificado que não gerencia mais modos
+// Contexto atualizado para business
 interface ContextType {
-  // Manter compatibilidade com código existente
-  mode: "personal";
-  isBusiness: false;
-  isPersonal: true;
+  mode: "business";
+  isBusiness: true;
+  isPersonal: false;
   setMode: () => void;
   toggleMode: () => void;
 }
@@ -14,11 +13,11 @@ interface ContextType {
 const ModeContext = createContext<ContextType | undefined>(undefined);
 
 export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Valores fixos para manter compatibilidade
+  // Valores fixos para modo business
   const value: ContextType = {
-    mode: "personal" as const,
-    isBusiness: false as const,
-    isPersonal: true as const,
+    mode: "business" as const,
+    isBusiness: true as const,
+    isPersonal: false as const,
     setMode: () => {}, // Função vazia para compatibilidade
     toggleMode: () => {} // Função vazia para compatibilidade
   };
