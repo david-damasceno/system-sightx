@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
 
-  const fetchTenant = async (userId: string) => {
+  const fetchTenant = async (userId: string, retryCount = 0) => {
     try {
       console.log("Buscando tenant para o usuário:", userId);
       const { data, error } = await supabase
@@ -52,11 +52,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error("Erro ao buscar tenant:", error);
+        
+        // Se é um novo usuário e o tenant ainda não existe, aguardar um pouco
+        if (error.code === 'PGRST116' && retryCount < 3) {
+          console.log(`Tenant não encontrado, tentativa ${retryCount + 1}/3. Aguardando...`);
+          setTimeout(() => fetchTenant(userId, retryCount + 1), 2000);
+          return null;
+        }
+        
         return null;
       }
 
       console.log("Tenant encontrado:", data);
       setTenant(data);
+      
+      // Se o tenant está com status 'creating', verificar periodicamente
+      if (data.status === 'creating') {
+        console.log("Tenant ainda em criação, verificando novamente em 3 segundos...");
+        setTimeout(() => fetchTenant(userId), 3000);
+      }
+      
       return data;
     } catch (error) {
       console.error("Erro ao buscar tenant:", error);
@@ -171,8 +186,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Seu ambiente foi configurado automaticamente. Bem-vindo ao SightX!",
       });
 
-      // O tenant já é criado automaticamente pelo trigger, então apenas aguardamos
-      console.log("Usuário criado com sucesso:", data.user?.id);
+      // O tenant é criado automaticamente pelo trigger, então aguardamos um pouco
+      if (data.user) {
+        console.log("Usuário criado com sucesso:", data.user?.id);
+        // Dar tempo para o trigger criar o tenant
+        setTimeout(() => fetchTenant(data.user!.id), 1000);
+      }
 
     } catch (error: any) {
       console.error("Erro ao criar conta:", error);

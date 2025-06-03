@@ -27,6 +27,11 @@ const useChat = (existingChatId?: string) => {
     progress: 0
   });
 
+  // Função para verificar se o tenant está pronto
+  const isTenantReady = () => {
+    return tenant && tenant.schema_name && tenant.status === 'active';
+  };
+
   // Função para carregar as mensagens do esquema do usuário
   const loadChatSessions = async () => {
     if (!user) return;
@@ -37,8 +42,8 @@ const useChat = (existingChatId?: string) => {
         return;
       }
       
-      // Se não temos schema do tenant ainda ou o tenant não está ativo, usamos dados simulados
-      if (!tenant || !tenant.schema_name || tenant.status !== 'active') {
+      // Se não temos schema do tenant ainda ou o tenant não está ativo, usar dados temporários
+      if (!isTenantReady()) {
         console.log("Tenant não está ativo, criando sessão temporária");
         if (existingChatId) {
           const mockSession: ChatSession = {
@@ -55,7 +60,7 @@ const useChat = (existingChatId?: string) => {
       }
       
       // Usando o esquema específico do usuário para carregar as sessões
-      const schema = tenant.schema_name;
+      const schema = tenant!.schema_name;
       console.log(`Carregando sessões do schema: ${schema}`);
       
       const { data: sessions, error } = await schemaTable(schema, 'chat_sessions')
@@ -157,13 +162,13 @@ const useChat = (existingChatId?: string) => {
 
   // Salvar nova sessão no esquema do usuário
   const saveNewSession = async (session: ChatSession) => {
-    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active') {
+    if (!user || !isTenantReady()) {
       console.log("Armazenamento temporário (tenant não configurado ou não ativo):", session);
       return;
     }
     
     try {
-      const schema = tenant.schema_name;
+      const schema = tenant!.schema_name;
       console.log(`Salvando nova sessão no schema: ${schema}`);
       
       // Salvar sessão
@@ -189,19 +194,17 @@ const useChat = (existingChatId?: string) => {
 
   // Salvar mensagens no esquema do usuário
   const saveMessages = async (sessionId: string, newMessages: Message[]) => {
-    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active' || newMessages.length === 0) {
+    if (!user || !isTenantReady() || newMessages.length === 0) {
       console.log("Não é possível salvar mensagens:", { 
         hasUser: !!user, 
-        hasTenant: !!tenant, 
-        hasSchema: !!tenant?.schema_name, 
-        isActive: tenant?.status === 'active',
+        isTenantReady: isTenantReady(),
         messageCount: newMessages.length 
       });
       return;
     }
     
     try {
-      const schema = tenant.schema_name;
+      const schema = tenant!.schema_name;
       console.log(`Salvando ${newMessages.length} mensagens no schema: ${schema}`);
       
       const messagesToInsert = newMessages.map(msg => ({
@@ -534,10 +537,10 @@ const useChat = (existingChatId?: string) => {
   };
 
   const deleteChat = async (chatId: string) => {
-    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active') return;
+    if (!user || !isTenantReady()) return;
     
     try {
-      const schema = tenant.schema_name;
+      const schema = tenant!.schema_name;
       
       // Excluir mensagens primeiro (devido à restrição de chave estrangeira)
       const { error: messagesError } = await schemaTable(schema, 'chat_messages')
@@ -570,10 +573,10 @@ const useChat = (existingChatId?: string) => {
   };
 
   const clearAllChats = async () => {
-    if (!user || !tenant || !tenant.schema_name || tenant.status !== 'active') return;
+    if (!user || !isTenantReady()) return;
     
     try {
-      const schema = tenant.schema_name;
+      const schema = tenant!.schema_name;
       
       // Excluir todas as mensagens do usuário
       const { error: messagesError } = await schemaTable(schema, 'chat_messages')
@@ -613,7 +616,7 @@ const useChat = (existingChatId?: string) => {
     aiTyping,
     deleteChat,
     clearAllChats,
-    improveMessage, // Nova função exportada
+    improveMessage,
   };
 };
 
