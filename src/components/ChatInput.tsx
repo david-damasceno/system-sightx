@@ -94,10 +94,15 @@ const ChatInput = ({
     toast.success("Áudio gravado com sucesso!");
   };
 
-  // Função otimizada para melhorar mensagem usando Azure OpenAI
+  // Função finalizada para melhorar mensagem usando Azure OpenAI
   const improveMessage = async () => {
     if (!message.trim()) {
       toast.error("Digite uma mensagem para melhorar");
+      return;
+    }
+
+    if (message.trim().length < 10) {
+      toast.error("A mensagem deve ter pelo menos 10 caracteres para ser melhorada");
       return;
     }
 
@@ -105,23 +110,32 @@ const ChatInput = ({
     setOriginalMessage(message);
 
     try {
+      console.log("Melhorando mensagem:", message);
       const improvedText = await improveMessageAPI(message);
-      setImprovedMessage(improvedText);
-      setMessage(improvedText);
-      setIsImproved(true);
-      toast.success("Mensagem melhorada com IA!");
+      
+      if (improvedText && improvedText.trim() !== message.trim()) {
+        setImprovedMessage(improvedText);
+        setMessage(improvedText);
+        setIsImproved(true);
+        toast.success("Mensagem melhorada com IA!");
+      } else {
+        toast.info("A mensagem já está bem escrita!");
+      }
     } catch (error) {
-      toast.error("Erro ao melhorar mensagem. Tente novamente.");
       console.error("Erro na melhoria:", error);
+      toast.error("Erro ao melhorar mensagem. Tente novamente.");
     } finally {
       setImprovingMessage(false);
     }
   };
 
   const restoreOriginalMessage = () => {
-    setMessage(originalMessage);
-    setIsImproved(false);
-    toast.info("Restaurada mensagem original");
+    if (originalMessage) {
+      setMessage(originalMessage);
+      setIsImproved(false);
+      setImprovedMessage("");
+      toast.info("Restaurada mensagem original");
+    }
   };
 
   return (
@@ -151,15 +165,18 @@ const ChatInput = ({
         <div className={cn(
           "relative flex items-end rounded-xl overflow-hidden border transition-all flex-1", 
           focused ? "ring-2 ring-sightx-purple" : "", 
-          isProcessing ? "opacity-50" : ""
+          isProcessing || improvingMessage ? "opacity-50" : ""
         )}>
           <Textarea 
             ref={textareaRef} 
             value={message} 
             onChange={e => setMessage(e.target.value)} 
             onKeyDown={handleKeyDown} 
-            placeholder="Escreva sua mensagem para análise de negócios..." 
-            className="pr-24 resize-none min-h-[56px] max-h-[200px] rounded-xl py-3.5 transition-all" 
+            placeholder={isImproved ? "Mensagem melhorada com IA - pressione Enter para enviar" : "Escreva sua mensagem para análise de negócios..."} 
+            className={cn(
+              "pr-24 resize-none min-h-[56px] max-h-[200px] rounded-xl py-3.5 transition-all",
+              isImproved && "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
+            )}
             disabled={isProcessing || showVoiceRecorder || improvingMessage} 
             rows={1} 
             onFocus={() => setFocused(true)} 
@@ -171,6 +188,7 @@ const ChatInput = ({
           <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
             {/* Tools */}
             <div className="flex gap-1">
+              {/* Attach file */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -191,6 +209,7 @@ const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
               
+              {/* Voice recorder */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -211,6 +230,7 @@ const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
               
+              {/* Search */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -231,7 +251,8 @@ const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
               
-              {!isImproved && message.trim() ? (
+              {/* Improve message */}
+              {!isImproved && message.trim() && message.trim().length >= 10 ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -244,7 +265,7 @@ const ChatInput = ({
                           improvingMessage ? "opacity-50" : "hover:bg-sightx-purple/10"
                         )}
                         onClick={improveMessage}
-                        disabled={isProcessing || improvingMessage || !message.trim()}
+                        disabled={isProcessing || improvingMessage || message.trim().length < 10}
                       >
                         {improvingMessage ? (
                           <span className="animate-spin h-4 w-4 border-2 border-sightx-purple border-t-transparent rounded-full" />
@@ -308,13 +329,16 @@ const ChatInput = ({
         {/* Helper text */}
         <div className="mt-2 absolute bottom-1 left-[100px] flex justify-between items-center text-xs text-muted-foreground">
           <div>
-            <span className="opacity-70">Shift + Enter para nova linha • Contexto: Business</span>
+            <span className="opacity-70">
+              Shift + Enter para nova linha • Contexto: Business
+              {message.trim().length > 0 && message.trim().length < 10 && " • Mín. 10 caracteres para melhorar"}
+            </span>
           </div>
           <div className="flex gap-2">
             {isProcessing && <span className="animate-pulse">Processando...</span>}
-            {improvingMessage && <span className="animate-pulse">Melhorando com IA...</span>}
+            {improvingMessage && <span className="animate-pulse text-sightx-purple">Melhorando com IA...</span>}
             {isImproved && !improvingMessage && (
-              <span className="text-sightx-purple flex items-center gap-1">
+              <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
                 Melhorado com IA
               </span>

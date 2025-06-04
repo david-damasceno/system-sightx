@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
 import { useMode } from "../contexts/ModeContext";
-import { supabase, schemaTable } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -20,7 +19,7 @@ interface AiTypingState {
 
 const useChat = (existingChatId?: string) => {
   const { mode } = useMode();
-  const { user, tenant } = useAuth();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
@@ -32,12 +31,7 @@ const useChat = (existingChatId?: string) => {
     progress: 0
   });
 
-  // Função para verificar se o tenant está pronto
-  const isTenantReady = () => {
-    return tenant && tenant.schema_name && tenant.status === 'active';
-  };
-
-  // Função para carregar as mensagens do esquema do usuário
+  // Função para carregar as mensagens do esquema public
   const loadChatSessions = async () => {
     if (!user) return;
     
@@ -47,28 +41,10 @@ const useChat = (existingChatId?: string) => {
         return;
       }
       
-      // Se não temos schema do tenant ainda ou o tenant não está ativo, usar dados temporários
-      if (!isTenantReady()) {
-        console.log("Tenant não está ativo, criando sessão temporária");
-        if (existingChatId) {
-          const mockSession: ChatSession = {
-            id: existingChatId,
-            title: "Nova conversa",
-            messages: [],
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
-          setChatSession(mockSession);
-          setMessages([]);
-        }
-        return;
-      }
+      console.log("Carregando sessões do esquema public");
       
-      // Usando o esquema específico do usuário para carregar as sessões
-      const schema = tenant!.schema_name;
-      console.log(`Carregando sessões do schema: ${schema}`);
-      
-      const { data: sessions, error } = await schemaTable(schema, 'chat_sessions')
+      const { data: sessions, error } = await supabase
+        .from('chat_sessions')
         .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
@@ -83,7 +59,8 @@ const useChat = (existingChatId?: string) => {
         const formattedSessions: ChatSession[] = await Promise.all(
           sessions.map(async (session: any) => {
             // Carregar mensagens para cada sessão
-            const { data: messageData, error: messagesError } = await schemaTable(schema, 'chat_messages')
+            const { data: messageData, error: messagesError } = await supabase
+              .from('chat_messages')
               .select('*')
               .eq('session_id', session.id)
               .order('timestamp', { ascending: true });
@@ -165,19 +142,19 @@ const useChat = (existingChatId?: string) => {
     }
   };
 
-  // Salvar nova sessão no esquema do usuário
+  // Salvar nova sessão no esquema public
   const saveNewSession = async (session: ChatSession) => {
-    if (!user || !isTenantReady()) {
-      console.log("Armazenamento temporário (tenant não configurado ou não ativo):", session);
+    if (!user) {
+      console.log("Usuário não autenticado");
       return;
     }
     
     try {
-      const schema = tenant!.schema_name;
-      console.log(`Salvando nova sessão no schema: ${schema}`);
+      console.log("Salvando nova sessão no esquema public");
       
       // Salvar sessão
-      const { error: sessionError } = await schemaTable(schema, 'chat_sessions')
+      const { error: sessionError } = await supabase
+        .from('chat_sessions')
         .insert({
           id: session.id,
           title: session.title,
@@ -197,20 +174,18 @@ const useChat = (existingChatId?: string) => {
     }
   };
 
-  // Salvar mensagens no esquema do usuário
+  // Salvar mensagens no esquema public
   const saveMessages = async (sessionId: string, newMessages: Message[]) => {
-    if (!user || !isTenantReady() || newMessages.length === 0) {
+    if (!user || newMessages.length === 0) {
       console.log("Não é possível salvar mensagens:", { 
         hasUser: !!user, 
-        isTenantReady: isTenantReady(),
         messageCount: newMessages.length 
       });
       return;
     }
     
     try {
-      const schema = tenant!.schema_name;
-      console.log(`Salvando ${newMessages.length} mensagens no schema: ${schema}`);
+      console.log(`Salvando ${newMessages.length} mensagens no esquema public`);
       
       const messagesToInsert = newMessages.map(msg => ({
         id: msg.id,
@@ -222,7 +197,8 @@ const useChat = (existingChatId?: string) => {
         attachment: msg.attachment || null
       }));
       
-      const { error: messagesError } = await schemaTable(schema, 'chat_messages')
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
         .insert(messagesToInsert);
         
       if (messagesError) {
@@ -233,7 +209,8 @@ const useChat = (existingChatId?: string) => {
       console.log("Mensagens salvas com sucesso");
       
       // Atualizar timestamp da sessão
-      const { error: updateError } = await schemaTable(schema, 'chat_sessions')
+      const { error: updateError } = await supabase
+        .from('chat_sessions')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', sessionId);
         
@@ -257,7 +234,7 @@ const useChat = (existingChatId?: string) => {
         setMessages([]);
       }
     }
-  }, [user, mode, tenant?.status, existingChatId]);
+  }, [user, mode, existingChatId]);
 
   // Efeito de digitação do AI
   useEffect(() => {
@@ -304,7 +281,6 @@ const useChat = (existingChatId?: string) => {
         body: {
           messages: [{ content: originalMessage, isAI: false }],
           userMode: mode,
-          tenantId: tenant?.id,
           stream: false,
           improveMessage: true
         }
@@ -341,7 +317,6 @@ const useChat = (existingChatId?: string) => {
       console.log("Histórico formatado:", { 
         messageCount: formattedHistory.length,
         mode: mode,
-        tenantId: tenant?.id,
         streaming: useStreaming
       });
 
@@ -356,7 +331,6 @@ const useChat = (existingChatId?: string) => {
           body: JSON.stringify({
             messages: formattedHistory,
             userMode: mode,
-            tenantId: tenant?.id,
             stream: true
           })
         });
@@ -422,7 +396,6 @@ const useChat = (existingChatId?: string) => {
           body: {
             messages: formattedHistory,
             userMode: mode,
-            tenantId: tenant?.id,
             stream: false
           }
         });
@@ -591,20 +564,20 @@ const useChat = (existingChatId?: string) => {
   };
 
   const deleteChat = async (chatId: string) => {
-    if (!user || !isTenantReady()) return;
+    if (!user) return;
     
     try {
-      const schema = tenant!.schema_name;
-      
       // Excluir mensagens primeiro (devido à restrição de chave estrangeira)
-      const { error: messagesError } = await schemaTable(schema, 'chat_messages')
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
         .delete()
         .eq('session_id', chatId);
         
       if (messagesError) throw messagesError;
       
       // Excluir a sessão
-      const { error: sessionError } = await schemaTable(schema, 'chat_sessions')
+      const { error: sessionError } = await supabase
+        .from('chat_sessions')
         .delete()
         .eq('id', chatId);
         
@@ -627,13 +600,12 @@ const useChat = (existingChatId?: string) => {
   };
 
   const clearAllChats = async () => {
-    if (!user || !isTenantReady()) return;
+    if (!user) return;
     
     try {
-      const schema = tenant!.schema_name;
-      
       // Excluir todas as mensagens do usuário
-      const { error: messagesError } = await schemaTable(schema, 'chat_messages')
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
         .delete()
         .in(
           'session_id', 
@@ -643,7 +615,8 @@ const useChat = (existingChatId?: string) => {
       if (messagesError) throw messagesError;
       
       // Excluir todas as sessões do usuário
-      const { error: sessionsError } = await schemaTable(schema, 'chat_sessions')
+      const { error: sessionsError } = await supabase
+        .from('chat_sessions')
         .delete()
         .eq('user_id', user.id);
         

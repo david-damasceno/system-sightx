@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Bookmark, Lightbulb, Rocket, 
@@ -219,6 +218,16 @@ const Context = () => {
     content: string;
   } | null>(null);
   
+  // Estado para campos da empresa
+  const [companyInfo, setCompanyInfo] = useState(() => {
+    const saved = localStorage.getItem("sightx-company-info");
+    return saved ? JSON.parse(saved) : {
+      mission: "",
+      vision: "",
+      values: ""
+    };
+  });
+  
   // Estado para armazenar contextos, inicializados com os padrões
   const [contexts, setContexts] = useState(() => {
     const saved = localStorage.getItem("sightx-contexts");
@@ -301,6 +310,18 @@ const Context = () => {
     }
   };
   
+  const handleSaveCompanyInfo = () => {
+    localStorage.setItem("sightx-company-info", JSON.stringify(companyInfo));
+    toast.success("Informações da empresa salvas com sucesso!");
+  };
+  
+  const updateCompanyField = (field: string, value: string) => {
+    setCompanyInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
   return (
     <div className="container max-w-6xl py-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -321,10 +342,73 @@ const Context = () => {
         </Button>
       </div>
       
+      {/* Nova seção para informações da empresa */}
       <div className="bg-card rounded-lg p-5 border shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <Bookmark className="h-5 w-5 text-sightx-purple" />
-          <h2 className="text-lg font-medium">Sobre os Contextos</h2>
+          <h2 className="text-lg font-medium">Informações da Empresa</h2>
+        </div>
+        
+        <p className="text-muted-foreground mb-6">
+          Defina a missão, visão e valores da sua empresa. Essas informações serão usadas 
+          como contexto adicional para melhorar as respostas do assistente.
+        </p>
+        
+        <div className="grid gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="mission" className="text-sm font-medium">
+              Missão da Empresa
+            </Label>
+            <Textarea
+              id="mission"
+              value={companyInfo.mission}
+              onChange={(e) => updateCompanyField("mission", e.target.value)}
+              placeholder="Descreva a missão da sua empresa..."
+              className="min-h-[80px]"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="vision" className="text-sm font-medium">
+              Visão da Empresa
+            </Label>
+            <Textarea
+              id="vision"
+              value={companyInfo.vision}
+              onChange={(e) => updateCompanyField("vision", e.target.value)}
+              placeholder="Descreva a visão da sua empresa..."
+              className="min-h-[80px]"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="values" className="text-sm font-medium">
+              Valores da Empresa
+            </Label>
+            <Textarea
+              id="values"
+              value={companyInfo.values}
+              onChange={(e) => updateCompanyField("values", e.target.value)}
+              placeholder="Liste os valores da sua empresa..."
+              className="min-h-[80px]"
+            />
+          </div>
+          
+          <Button 
+            onClick={handleSaveCompanyInfo}
+            className="bg-sightx-purple hover:bg-sightx-purple/90 w-fit"
+          >
+            Salvar Informações da Empresa
+          </Button>
+        </div>
+      </div>
+      
+      <Separator />
+      
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Bookmark className="h-5 w-5 text-sightx-purple" />
+          <h2 className="text-xl font-medium">Sobre os Contextos</h2>
         </div>
         
         <p className="text-muted-foreground mb-4">

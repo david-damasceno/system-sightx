@@ -1,1111 +1,403 @@
 
-import { useState, useEffect } from "react";
-import { useMode } from "../contexts/ModeContext";
+import { useState } from "react";
 import { 
-  BarChart, FileText, Share2, Filter, Download, Trash2, 
-  PieChart, TrendingUp, Calendar, Search, Plus, Tag, CheckCircle2, 
-  AlertCircle, ChevronDown, Star, Clock, Check, CircleSlash, X
+  BarChart3, Plus, Search, Filter, Share2, 
+  Download, Eye, Star, Bookmark, 
+  TrendingUp, Users, DollarSign, Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { 
-  Card, CardContent, CardDescription, 
-  CardFooter, CardHeader, CardTitle 
-} from "@/components/ui/card";
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+  Select, SelectContent, SelectItem, 
+  SelectTrigger, SelectValue 
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import {
-  Dialog, DialogContent, DialogDescription,
-  DialogFooter, DialogHeader, DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
-// Tipos para as análises
-interface Analysis {
+interface Dashboard {
   id: string;
   title: string;
   description: string;
-  content: string;
-  createdAt: Date | string;  // Modificado para aceitar string também
-  updatedAt: Date | string;  // Modificado para aceitar string também
+  category: string;
+  createdAt: Date;
+  updatedAt: Date;
+  views: number;
+  isShared: boolean;
+  isFavorite: boolean;
+  author: string;
   tags: string[];
-  status: "complete" | "pending" | "archived";
-  favorite: boolean;
+  thumbnail?: string;
 }
 
-// Dados de exemplo para análises pessoais
-const generateMockAnalyses = (): Analysis[] => {
-  const personalAnalyses = [
-    {
-      id: "1",
-      title: "Análise de Hábitos de Leitura",
-      description: "Estudo sobre meus padrões de leitura nos últimos 6 meses",
-      content: "Esta análise examina meus hábitos de leitura ao longo dos últimos 6 meses, incluindo gêneros preferidos, tempo dedicado à leitura e insights sobre como melhorar minha rotina de leitura.",
-      createdAt: new Date(2025, 3, 2),
-      updatedAt: new Date(2025, 3, 4),
-      tags: ["leitura", "hábitos", "desenvolvimento pessoal"],
-      status: "complete" as const,
-      favorite: true
-    },
-    {
-      id: "2",
-      title: "Planejamento de Viagem",
-      description: "Análise de custos e roteiro para viagem de férias",
-      content: "Este planejamento detalha os custos estimados, roteiro sugerido e considerações logísticas para uma viagem de férias de duas semanas, incluindo acomodações, transporte e atrações.",
-      createdAt: new Date(2025, 2, 10),
-      updatedAt: new Date(2025, 2, 11),
-      tags: ["viagem", "planejamento", "férias"],
-      status: "complete" as const,
-      favorite: false
-    },
-    {
-      id: "3",
-      title: "Revisão de Metas Anuais",
-      description: "Análise do progresso nas metas estabelecidas para o ano",
-      content: "Esta revisão avalia o progresso nas cinco metas principais estabelecidas para este ano, identificando pontos fortes, áreas de melhoria e ajustes necessários para os próximos meses.",
-      createdAt: new Date(2025, 1, 15),
-      updatedAt: new Date(2025, 1, 20),
-      tags: ["metas", "desenvolvimento pessoal", "planejamento"],
-      status: "pending" as const,
-      favorite: true
-    }
-  ];
+const mockDashboards: Dashboard[] = [
+  {
+    id: "1",
+    title: "Vendas por Região",
+    description: "Análise detalhada de vendas segmentada por regiões geográficas",
+    category: "Vendas",
+    createdAt: new Date("2024-01-15"),
+    updatedAt: new Date("2024-01-20"),
+    views: 245,
+    isShared: true,
+    isFavorite: true,
+    author: "Você",
+    tags: ["vendas", "regional", "geografia"]
+  },
+  {
+    id: "2", 
+    title: "Performance de Marketing",
+    description: "Métricas de ROI e conversão das campanhas de marketing digital",
+    category: "Marketing",
+    createdAt: new Date("2024-01-10"),
+    updatedAt: new Date("2024-01-18"),
+    views: 189,
+    isShared: false,
+    isFavorite: false,
+    author: "Você",
+    tags: ["marketing", "roi", "conversão"]
+  },
+  {
+    id: "3",
+    title: "Análise Financeira",
+    description: "Dashboard executivo com indicadores financeiros principais",
+    category: "Financeiro",
+    createdAt: new Date("2024-01-05"),
+    updatedAt: new Date("2024-01-22"),
+    views: 312,
+    isShared: true,
+    isFavorite: true,
+    author: "Você",
+    tags: ["financeiro", "executivo", "kpis"]
+  },
+  {
+    id: "4",
+    title: "Satisfação do Cliente",
+    description: "Métricas de NPS, CSAT e análise de feedback dos clientes",
+    category: "Atendimento",
+    createdAt: new Date("2024-01-12"),
+    updatedAt: new Date("2024-01-19"),
+    views: 156,
+    isShared: false,
+    isFavorite: false,
+    author: "Você",
+    tags: ["cliente", "nps", "satisfação"]
+  },
+  {
+    id: "5",
+    title: "Operações e Logística",
+    description: "Monitoramento de entregas, estoque e eficiência operacional",
+    category: "Operações",
+    createdAt: new Date("2024-01-08"),
+    updatedAt: new Date("2024-01-21"),
+    views: 98,
+    isShared: true,
+    isFavorite: false,
+    author: "Você",
+    tags: ["operações", "logística", "estoque"]
+  },
+  {
+    id: "6",
+    title: "Recursos Humanos",
+    description: "Análise de turnover, produtividade e engagement da equipe",
+    category: "RH",
+    createdAt: new Date("2024-01-14"),
+    updatedAt: new Date("2024-01-17"),
+    views: 134,
+    isShared: false,
+    isFavorite: true,
+    author: "Você",
+    tags: ["rh", "turnover", "produtividade"]
+  }
+];
 
-  return personalAnalyses;
-};
+const categories = [
+  "Todos",
+  "Vendas",
+  "Marketing", 
+  "Financeiro",
+  "Atendimento",
+  "Operações",
+  "RH"
+];
 
-// Componente de filtro para as análises
-const AnalysisFilter = ({ onFilterChange }: { onFilterChange: (filter: string) => void }) => {
-  const [activeFilter, setActiveFilter] = useState("all");
-  
-  const handleFilterChange = (filter: string) => {
-    setActiveFilter(filter);
-    onFilterChange(filter);
-  };
-  
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Button 
-        variant={activeFilter === "all" ? "default" : "outline"} 
-        size="sm"
-        className={cn(
-          activeFilter === "all" && "bg-sightx-purple hover:bg-sightx-purple/90"
-        )}
-        onClick={() => handleFilterChange("all")}
-      >
-        Todas
-      </Button>
-      <Button 
-        variant={activeFilter === "favorites" ? "default" : "outline"} 
-        size="sm"
-        className={cn(
-          activeFilter === "favorites" && "bg-sightx-purple hover:bg-sightx-purple/90"
-        )}
-        onClick={() => handleFilterChange("favorites")}
-      >
-        <Star className="h-4 w-4 mr-1" />
-        Favoritas
-      </Button>
-      <Button 
-        variant={activeFilter === "recent" ? "default" : "outline"} 
-        size="sm"
-        className={cn(
-          activeFilter === "recent" && "bg-sightx-purple hover:bg-sightx-purple/90"
-        )}
-        onClick={() => handleFilterChange("recent")}
-      >
-        <Clock className="h-4 w-4 mr-1" />
-        Recentes
-      </Button>
-      <Button 
-        variant={activeFilter === "complete" ? "default" : "outline"} 
-        size="sm"
-        className={cn(
-          activeFilter === "complete" && "bg-sightx-purple hover:bg-sightx-purple/90"
-        )}
-        onClick={() => handleFilterChange("complete")}
-      >
-        <CheckCircle2 className="h-4 w-4 mr-1" />
-        Completas
-      </Button>
-      <Button 
-        variant={activeFilter === "pending" ? "default" : "outline"} 
-        size="sm"
-        className={cn(
-          activeFilter === "pending" && "bg-sightx-purple hover:bg-sightx-purple/90"
-        )}
-        onClick={() => handleFilterChange("pending")}
-      >
-        <AlertCircle className="h-4 w-4 mr-1" />
-        Pendentes
-      </Button>
-      <Button 
-        variant={activeFilter === "archived" ? "default" : "outline"} 
-        size="sm"
-        className={cn(
-          activeFilter === "archived" && "bg-sightx-purple hover:bg-sightx-purple/90"
-        )}
-        onClick={() => handleFilterChange("archived")}
-      >
-        <CircleSlash className="h-4 w-4 mr-1" />
-        Arquivadas
-      </Button>
-    </div>
-  );
-};
-
-// Componente de card para análise
-const AnalysisCard = ({ 
-  analysis, 
-  onToggleFavorite, 
-  onDelete,
-  onOpenAnalysis,
-  onChangeStatus 
-}: { 
-  analysis: Analysis, 
-  onToggleFavorite: (id: string) => void, 
-  onDelete: (id: string) => void,
-  onOpenAnalysis: (analysis: Analysis) => void,
-  onChangeStatus: (id: string, status: "complete" | "pending" | "archived") => void
-}) => {
-  // Formatar data
-  const formatDate = (date: Date | string) => {
-    // Verifica se a data é válida antes de formatar
-    try {
-      const dateObject = date instanceof Date ? date : new Date(date);
-      
-      // Verifica se a data é válida
-      if (isNaN(dateObject.getTime())) {
-        return "Data inválida";
-      }
-      
-      return new Intl.DateTimeFormat('pt-BR', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      }).format(dateObject);
-    } catch (error) {
-      console.error("Erro ao formatar data:", error);
-      return "Data inválida";
-    }
-  };
-  
-  // Badge de status
-  const getStatusBadge = () => {
-    switch (analysis.status) {
-      case 'complete':
-        return (
-          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200">
-            <Check className="h-3 w-3 mr-1" />
-            Completa
-          </Badge>
-        );
-      case 'pending':
-        return (
-          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-            <Clock className="h-3 w-3 mr-1" />
-            Pendente
-          </Badge>
-        );
-      case 'archived':
-        return (
-          <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-200">
-            <CircleSlash className="h-3 w-3 mr-1" />
-            Arquivada
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-  
-  return (
-    <Card className={cn(
-      "transition-all hover:shadow-md cursor-pointer group", 
-      analysis.status === "archived" && "opacity-70",
-      analysis.favorite && "ring-1 ring-amber-200 shadow-sm"
-    )}
-    onClick={() => onOpenAnalysis(analysis)}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="group-hover:underline decoration-1 underline-offset-4 transition-all">{analysis.title}</CardTitle>
-            <CardDescription>{analysis.description}</CardDescription>
-          </div>
-          <div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn(
-                "h-8 w-8 transition-colors",
-                analysis.favorite ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground hover:text-amber-500"
-              )}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite(analysis.id);
-              }}
-            >
-              <Star className="h-4 w-4" fill={analysis.favorite ? "currentColor" : "none"} />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-          {analysis.content}
-        </p>
-        
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {analysis.tags.map((tag, index) => (
-            <Badge key={index} variant="secondary" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            {formatDate(analysis.createdAt)}
-          </span>
-          {getStatusBadge()}
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between pt-2 border-t">
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost"
-            size="sm"
-            className="text-red-500 hover:text-white hover:bg-red-500"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(analysis.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Excluir
-          </Button>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="outline" size="sm" className="ml-auto">
-              Status
-              <ChevronDown className="h-4 w-4 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>Alterar Status</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              onChangeStatus(analysis.id, "complete");
-            }}>
-              <Check className="h-4 w-4 mr-2" />
-              Completa
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              onChangeStatus(analysis.id, "pending");
-            }}>
-              <Clock className="h-4 w-4 mr-2" />
-              Pendente
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              onChangeStatus(analysis.id, "archived");
-            }}>
-              <CircleSlash className="h-4 w-4 mr-2" />
-              Arquivar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </CardFooter>
-    </Card>
-  );
-};
-
-// Dialog de detalhes da análise
-interface AnalysisDetailDialogProps {
-  analysis: Analysis | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (analysis: Analysis) => void;
-  onDelete: (id: string) => void;
-}
-
-const AnalysisDetailDialog = ({ 
-  analysis, 
-  isOpen, 
-  onClose, 
-  onSave, 
-  onDelete 
-}: AnalysisDetailDialogProps) => {
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editContent, setEditContent] = useState("");
-  const [editTags, setEditTags] = useState<string[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [newTag, setNewTag] = useState("");
-  
-  useEffect(() => {
-    if (analysis) {
-      setEditTitle(analysis.title);
-      setEditDescription(analysis.description);
-      setEditContent(analysis.content);
-      setEditTags([...analysis.tags]);
-    }
-  }, [analysis]);
-  
-  const handleSave = () => {
-    if (!analysis) return;
-    
-    const updatedAnalysis: Analysis = {
-      ...analysis,
-      title: editTitle,
-      description: editDescription,
-      content: editContent,
-      tags: editTags,
-      updatedAt: new Date()
-    };
-    
-    onSave(updatedAnalysis);
-    setIsEditing(false);
-    toast.success("Análise atualizada com sucesso!");
-  };
-  
-  const handleAddTag = () => {
-    if (newTag.trim() && !editTags.includes(newTag.trim())) {
-      setEditTags([...editTags, newTag.trim()]);
-      setNewTag("");
-    }
-  };
-  
-  const handleRemoveTag = (tagToRemove: string) => {
-    setEditTags(editTags.filter(tag => tag !== tagToRemove));
-  };
-  
-  // Formatar data completa
-  const formatFullDate = (date: Date | string) => {
-    // Verifica se a data é válida antes de formatar
-    try {
-      const dateObject = date instanceof Date ? date : new Date(date);
-      
-      // Verifica se a data é válida
-      if (isNaN(dateObject.getTime())) {
-        return "Data inválida";
-      }
-      
-      return new Intl.DateTimeFormat('pt-BR', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(dateObject);
-    } catch (error) {
-      console.error("Erro ao formatar data completa:", error);
-      return "Data inválida";
-    }
-  };
-  
-  if (!analysis) return null;
-  
-  return (
-    <Dialog open={isOpen} onOpenChange={() => {
-      onClose();
-      setIsEditing(false);
-    }}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex justify-between items-center">
-            <DialogTitle>
-              {isEditing ? "Editar Análise" : "Detalhes da Análise"}
-            </DialogTitle>
-            {!isEditing && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setIsEditing(true)}
-                className="text-sightx-purple"
-              >
-                Editar
-              </Button>
-            )}
-          </div>
-          <DialogDescription>
-            {isEditing 
-              ? "Faça as alterações necessárias na análise." 
-              : "Visualize os detalhes completos da análise."
-            }
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-2">
-          {isEditing ? (
-            <>
-              <div className="space-y-2">
-                <label htmlFor="title" className="text-sm font-medium">
-                  Título
-                </label>
-                <Input
-                  id="title"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="Título da análise"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="description" className="text-sm font-medium">
-                  Descrição
-                </label>
-                <Input
-                  id="description"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Breve descrição da análise"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="content" className="text-sm font-medium">
-                  Conteúdo
-                </label>
-                <Textarea
-                  id="content"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  placeholder="Conteúdo detalhado da análise"
-                  className="min-h-[200px]"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Tags
-                </label>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {editTags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="py-1 px-2">
-                      {tag}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveTag(tag)}
-                        className="h-4 w-4 ml-1 hover:bg-transparent hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Nova tag"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddTag();
-                      }
-                    }}
-                  />
-                  <Button 
-                    onClick={handleAddTag}
-                    variant="outline"
-                    className="whitespace-nowrap text-sightx-purple"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="bg-muted/30 p-4 rounded-lg">
-                <h2 className="text-xl font-medium mb-2">{analysis.title}</h2>
-                <p className="text-muted-foreground mb-4">{analysis.description}</p>
-                
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {analysis.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                
-                <div className="space-y-1 text-xs text-muted-foreground mb-4">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>Criado em: {formatFullDate(analysis.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    <span>Atualizado em: {formatFullDate(analysis.updatedAt)}</span>
-                  </div>
-                </div>
-                
-                <Separator className="mb-4" />
-                
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <p className="whitespace-pre-line">{analysis.content}</p>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-        
-        <DialogFooter>
-          {isEditing ? (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsEditing(false)}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                className="bg-sightx-purple hover:bg-sightx-purple/90"
-                onClick={handleSave}
-              >
-                Salvar Alterações
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button 
-                variant="destructive" 
-                onClick={() => {
-                  onDelete(analysis.id);
-                  onClose();
-                }}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Excluir
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={onClose}
-              >
-                Fechar
-              </Button>
-            </>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Componente de formulário de nova análise
-interface NewAnalysisFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (analysis: Omit<Analysis, "id" | "createdAt" | "updatedAt" | "status" | "favorite">) => void;
-}
-
-const NewAnalysisForm = ({ isOpen, onClose, onSave }: NewAnalysisFormProps) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [content, setContent] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState("");
-  
-  const handleSave = () => {
-    if (!title.trim()) {
-      toast.error("O título é obrigatório");
-      return;
-    }
-    
-    if (!content.trim()) {
-      toast.error("O conteúdo é obrigatório");
-      return;
-    }
-    
-    onSave({
-      title,
-      description,
-      content,
-      tags
-    });
-    
-    // Limpar formulário
-    setTitle("");
-    setDescription("");
-    setContent("");
-    setTags([]);
-    setNewTag("");
-  };
-  
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag("");
-    }
-  };
-  
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
-  
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Nova Análise</DialogTitle>
-          <DialogDescription>
-            Crie uma nova análise para salvar e compartilhar insights importantes.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <label htmlFor="title" className="text-sm font-medium">
-              Título
-            </label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Título da análise"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Descrição
-            </label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Breve descrição da análise"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="content" className="text-sm font-medium">
-              Conteúdo
-            </label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Conteúdo detalhado da análise"
-              className="min-h-[150px]"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Tags
-            </label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {tags.map((tag, index) => (
-                <Badge key={index} variant="secondary" className="py-1 px-2">
-                  {tag}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="h-4 w-4 ml-1 hover:bg-transparent hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Nova tag"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddTag();
-                  }
-                }}
-              />
-              <Button 
-                onClick={handleAddTag}
-                variant="outline"
-                className="whitespace-nowrap text-sightx-purple"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar
-              </Button>
-            </div>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button 
-            className="bg-sightx-purple hover:bg-sightx-purple/90"
-            onClick={handleSave}
-          >
-            Salvar Análise
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Componente principal para a página de análises
 const Analysis = () => {
-  const { mode } = useMode();
-  const [analyses, setAnalyses] = useState<Analysis[]>(() => {
-    const saved = localStorage.getItem('sightx-analyses-personal');
-    return saved ? JSON.parse(saved) : generateMockAnalyses();
-  });
-  const [filteredAnalyses, setFilteredAnalyses] = useState<Analysis[]>(analyses);
+  const [dashboards, setDashboards] = useState(mockDashboards);
+  const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false);
-  const [selectedAnalysis, setSelectedAnalysis] = useState<Analysis | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  
-  // Atualizar análises quando o componente carregar
-  useEffect(() => {
-    const saved = localStorage.getItem('sightx-analyses-personal');
-    
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setAnalyses(parsed);
-      } catch (error) {
-        console.error("Erro ao analisar dados do localStorage:", error);
-        setAnalyses(generateMockAnalyses());
+  const [sortBy, setSortBy] = useState("updated");
+
+  const filteredDashboards = dashboards
+    .filter(dashboard => {
+      const matchesCategory = selectedCategory === "Todos" || dashboard.category === selectedCategory;
+      const matchesSearch = dashboard.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           dashboard.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           dashboard.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      return matchesCategory && matchesSearch;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "views":
+          return b.views - a.views;
+        case "created":
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        case "alphabetical":
+          return a.title.localeCompare(b.title);
+        default: // updated
+          return b.updatedAt.getTime() - a.updatedAt.getTime();
       }
-    } else {
-      setAnalyses(generateMockAnalyses());
+    });
+
+  const toggleFavorite = (dashboardId: string) => {
+    setDashboards(prev => prev.map(d => 
+      d.id === dashboardId ? { ...d, isFavorite: !d.isFavorite } : d
+    ));
+    toast.success("Dashboard atualizado!");
+  };
+
+  const shareDashboard = (dashboard: Dashboard) => {
+    setDashboards(prev => prev.map(d => 
+      d.id === dashboard.id ? { ...d, isShared: !d.isShared } : d
+    ));
+    toast.success(dashboard.isShared ? "Dashboard privado" : "Dashboard compartilhado!");
+  };
+
+  const openDashboard = (dashboard: Dashboard) => {
+    // Incrementar views
+    setDashboards(prev => prev.map(d => 
+      d.id === dashboard.id ? { ...d, views: d.views + 1 } : d
+    ));
+    toast.info(`Abrindo dashboard: ${dashboard.title}`);
+    // Aqui seria a navegação para a página do dashboard
+  };
+
+  const exportDashboard = (dashboard: Dashboard) => {
+    toast.success(`Exportando dashboard: ${dashboard.title}`);
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "Vendas": return TrendingUp;
+      case "Marketing": return Activity;
+      case "Financeiro": return DollarSign;
+      case "Atendimento": return Users;
+      case "Operações": return BarChart3;
+      case "RH": return Users;
+      default: return BarChart3;
     }
-  }, []);
-  
-  // Atualizar localStorage quando análises mudar
-  useEffect(() => {
-    try {
-      localStorage.setItem('sightx-analyses-personal', JSON.stringify(analyses));
-    } catch (error) {
-      console.error("Erro ao salvar no localStorage:", error);
-    }
-  }, [analyses]);
-  
-  // Filtrar análises baseado na busca e filtro ativo
-  useEffect(() => {
-    let filtered = [...analyses];
-    
-    // Aplicar termo de busca
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        analysis => 
-          analysis.title.toLowerCase().includes(term) || 
-          analysis.description.toLowerCase().includes(term) || 
-          analysis.content.toLowerCase().includes(term) ||
-          analysis.tags.some(tag => tag.toLowerCase().includes(term))
-      );
-    }
-    
-    // Aplicar filtro
-    switch (activeFilter) {
-      case 'favorites':
-        filtered = filtered.filter(a => a.favorite);
-        break;
-      case 'recent':
-        filtered = filtered.sort((a, b) => {
-          const dateA = a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt);
-          const dateB = b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt);
-          return dateB.getTime() - dateA.getTime();
-        });
-        break;
-      case 'complete':
-        filtered = filtered.filter(a => a.status === 'complete');
-        break;
-      case 'pending':
-        filtered = filtered.filter(a => a.status === 'pending');
-        break;
-      case 'archived':
-        filtered = filtered.filter(a => a.status === 'archived');
-        break;
-      default:
-        // 'all' - sem filtro adicional além da busca
-        break;
-    }
-    
-    setFilteredAnalyses(filtered);
-  }, [analyses, searchTerm, activeFilter]);
-  
-  // Manipuladores de ações
-  const handleToggleFavorite = (id: string) => {
-    setAnalyses(prev => 
-      prev.map(analysis => 
-        analysis.id === id 
-          ? { ...analysis, favorite: !analysis.favorite } 
-          : analysis
-      )
-    );
-    
-    toast.success("Status de favorito atualizado");
   };
-  
-  const handleDelete = (id: string) => {
-    setAnalyses(prev => prev.filter(analysis => analysis.id !== id));
-    toast.success("Análise excluída com sucesso");
-  };
-  
-  const handleChangeStatus = (id: string, status: "complete" | "pending" | "archived") => {
-    setAnalyses(prev => 
-      prev.map(analysis => 
-        analysis.id === id 
-          ? { ...analysis, status, updatedAt: new Date() } 
-          : analysis
-      )
-    );
-    
-    toast.success(`Status alterado para: ${
-      status === "complete" ? "Completa" : 
-      status === "pending" ? "Pendente" : 
-      "Arquivada"
-    }`);
-  };
-  
-  const handleOpenAnalysis = (analysis: Analysis) => {
-    setSelectedAnalysis(analysis);
-    setIsDetailOpen(true);
-  };
-  
-  const handleSaveAnalysis = (updatedAnalysis: Analysis) => {
-    setAnalyses(prev => 
-      prev.map(analysis => 
-        analysis.id === updatedAnalysis.id 
-          ? updatedAnalysis 
-          : analysis
-      )
-    );
-    setSelectedAnalysis(updatedAnalysis);
-  };
-  
-  const handleCreateAnalysis = (newAnalysisData: Omit<Analysis, "id" | "createdAt" | "updatedAt" | "status" | "favorite">) => {
-    const newAnalysis: Analysis = {
-      id: Date.now().toString(),
-      ...newAnalysisData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      status: "pending",
-      favorite: false
-    };
-    
-    setAnalyses(prev => [newAnalysis, ...prev]);
-    setIsNewAnalysisOpen(false);
-    toast.success("Nova análise criada com sucesso");
-  };
-  
-  // Exportar análises
-  const handleExportAnalyses = () => {
-    const dataStr = JSON.stringify(analyses, null, 2);
-    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
-    
-    const exportFileDefaultName = `sightx-analises-pessoais-${new Date().toISOString().slice(0, 10)}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-    
-    toast.success("Análises exportadas com sucesso");
-  };
-  
+
   return (
-    <div className="container max-w-6xl py-6 space-y-6">
+    <div className="container max-w-7xl py-6 space-y-6">
       {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-sightx-purple/10">
-            <BarChart className="h-6 w-6 text-sightx-purple" />
+          <BarChart3 className="h-6 w-6 text-sightx-purple" />
+          <h1 className="text-2xl font-bold">Análise de Negócios</h1>
+        </div>
+        
+        <Button className="bg-sightx-purple hover:bg-sightx-purple/90">
+          <Plus className="h-4 w-4 mr-2" />
+          Criar Dashboard
+        </Button>
+      </div>
+
+      {/* Informações */}
+      <div className="bg-card rounded-lg p-6 border shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <BarChart3 className="h-5 w-5 text-sightx-purple" />
+          <h2 className="text-lg font-medium">Central de Dashboards</h2>
+        </div>
+        
+        <p className="text-muted-foreground mb-6">
+          Crie, gerencie e compartilhe dashboards personalizados para análise de dados do seu negócio. 
+          Transforme dados em insights acionáveis com visualizações poderosas.
+        </p>
+
+        {/* Estatísticas rápidas */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center p-3 rounded-lg bg-muted/40">
+            <div className="font-semibold text-lg">{dashboards.length}</div>
+            <div className="text-sm text-muted-foreground">Dashboards</div>
           </div>
-          <h1 className="text-2xl font-bold">Análises Pessoais</h1>
+          <div className="text-center p-3 rounded-lg bg-muted/40">
+            <div className="font-semibold text-lg">{dashboards.filter(d => d.isShared).length}</div>
+            <div className="text-sm text-muted-foreground">Compartilhados</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-muted/40">
+            <div className="font-semibold text-lg">{dashboards.filter(d => d.isFavorite).length}</div>
+            <div className="text-sm text-muted-foreground">Favoritos</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-muted/40">
+            <div className="font-semibold text-lg">{dashboards.reduce((sum, d) => sum + d.views, 0)}</div>
+            <div className="text-sm text-muted-foreground">Visualizações</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros e busca */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar dashboards, tags ou descrições..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
         
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleExportAnalyses}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Exportar
-          </Button>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
-          <Button 
-            className="flex items-center gap-2 bg-sightx-purple hover:bg-sightx-purple/90"
-            onClick={() => setIsNewAnalysisOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Nova Análise
-          </Button>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated">Última atualização</SelectItem>
+              <SelectItem value="created">Data de criação</SelectItem>
+              <SelectItem value="views">Mais visualizados</SelectItem>
+              <SelectItem value="alphabetical">Ordem alfabética</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-      
-      {/* Visão geral */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Total de Análises
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {analyses.filter(a => a.status !== "archived").length}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {analyses.filter(a => a.status === "archived").length} arquivadas
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              Análises Completas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {analyses.filter(a => a.status === "complete").length}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {analyses.length > 0 
-                ? Math.round((analyses.filter(a => a.status === "complete").length / analyses.length) * 100)
-                : 0}% do total
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-500" />
-              Análises Recentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {analyses.filter(a => {
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                try {
-                  const createdAt = a.createdAt instanceof Date 
-                    ? a.createdAt 
-                    : new Date(a.createdAt);
-                  return createdAt > oneWeekAgo;
-                } catch (error) {
-                  return false;
-                }
-              }).length}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Nos últimos 7 dias
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Filtros e busca */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="relative w-full sm:w-auto max-w-md">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar análises..."
-              className="pl-9 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+
+      {/* Grid de dashboards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredDashboards.map(dashboard => {
+          const CategoryIcon = getCategoryIcon(dashboard.category);
           
-          <AnalysisFilter 
-            onFilterChange={(filter) => setActiveFilter(filter)}
-          />
+          return (
+            <Card key={dashboard.id} className="group hover:shadow-lg transition-all duration-200 border hover:border-sightx-purple/50">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-sightx-purple/10 flex items-center justify-center">
+                      <CategoryIcon className="h-5 w-5 text-sightx-purple" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-lg font-semibold line-clamp-1">
+                        {dashboard.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {dashboard.category}
+                        </Badge>
+                        {dashboard.isFavorite && (
+                          <Star className="h-3 w-3 text-amber-500" fill="currentColor" />
+                        )}
+                        {dashboard.isShared && (
+                          <Share2 className="h-3 w-3 text-blue-500" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => toggleFavorite(dashboard.id)}
+                  >
+                    <Bookmark className={cn(
+                      "h-4 w-4",
+                      dashboard.isFavorite ? "text-amber-500" : "text-muted-foreground"
+                    )} />
+                  </Button>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <CardDescription className="text-sm line-clamp-2">
+                  {dashboard.description}
+                </CardDescription>
+                
+                <div className="flex flex-wrap gap-1">
+                  {dashboard.tags.slice(0, 3).map(tag => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {dashboard.tags.length > 3 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{dashboard.tags.length - 3}
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Eye className="h-3 w-3" />
+                    {dashboard.views} visualizações
+                  </div>
+                  <div>
+                    Atualizado {dashboard.updatedAt.toLocaleDateString()}
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    size="sm" 
+                    className="flex-1 bg-sightx-purple hover:bg-sightx-purple/90"
+                    onClick={() => openDashboard(dashboard)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Abrir
+                  </Button>
+                  
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => shareDashboard(dashboard)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => exportDashboard(dashboard)}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {filteredDashboards.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-muted">
+            <BarChart3 className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">Nenhum dashboard encontrado</h3>
+          <p className="text-muted-foreground mb-6">
+            {searchTerm ? "Nenhum dashboard corresponde aos seus critérios de busca" : "Você ainda não criou nenhum dashboard"}
+          </p>
+          <Button className="bg-sightx-purple hover:bg-sightx-purple/90">
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Primeiro Dashboard
+          </Button>
         </div>
-        
-        <Separator />
-      </div>
-      
-      {/* Lista de análises */}
-      <div className="space-y-6">
-        {filteredAnalyses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 bg-muted/30 rounded-lg border border-dashed">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-sightx-purple/10">
-              <FileText className="h-8 w-8 text-sightx-purple" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">Nenhuma análise encontrada</h3>
-            <p className="text-muted-foreground text-center max-w-md mb-6">
-              {searchTerm 
-                ? "Nenhuma análise corresponde aos critérios de busca. Tente outros termos ou limpe o filtro."
-                : "Você ainda não tem análises. Crie uma nova análise para começar a armazenar seus insights."
-              }
-            </p>
-            <Button 
-              onClick={() => {
-                setSearchTerm("");
-                setActiveFilter("all");
-                setIsNewAnalysisOpen(true);
-              }}
-              className="bg-sightx-purple hover:bg-sightx-purple/90"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {searchTerm ? "Limpar Filtros e Criar Nova" : "Criar Primeira Análise"}
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredAnalyses.map(analysis => (
-              <AnalysisCard 
-                key={analysis.id}
-                analysis={analysis}
-                onToggleFavorite={handleToggleFavorite}
-                onDelete={handleDelete}
-                onOpenAnalysis={handleOpenAnalysis}
-                onChangeStatus={handleChangeStatus}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-      
-      {/* Dialog de nova análise */}
-      <NewAnalysisForm 
-        isOpen={isNewAnalysisOpen}
-        onClose={() => setIsNewAnalysisOpen(false)}
-        onSave={handleCreateAnalysis}
-      />
-      
-      {/* Dialog de detalhes da análise */}
-      <AnalysisDetailDialog 
-        analysis={selectedAnalysis}
-        isOpen={isDetailOpen}
-        onClose={() => setIsDetailOpen(false)}
-        onSave={handleSaveAnalysis}
-        onDelete={handleDelete}
-      />
+      )}
     </div>
   );
 };

@@ -131,7 +131,7 @@ const ChatWindow = () => {
       {/* Chat messages area */}
       <ScrollArea 
         className={cn(
-          "flex-1 p-4 pt-6 space-y-6", 
+          "flex-1 p-4 pt-6", 
           isMobile ? "px-2" : "px-4"
         )} 
         onScrollCapture={handleScroll} 
@@ -150,27 +150,29 @@ const ChatWindow = () => {
             <p className="text-center">Digite uma mensagem abaixo para iniciar a conversa com nossa IA especializada em análise de dados.</p>
           </div>
         ) : (
-          messages.map((message, index) => {
-            const isTyping = message.isAI && index === messages.length - 1 && aiTyping.isTyping;
-            return (
-              <ChatMessage 
-                key={message.id} 
-                message={message} 
-                userAvatar={user?.avatar} 
-                typing={isTyping ? {
-                  isActive: true,
-                  partialContent: aiTyping.partialMessage
-                } : undefined} 
-                isHighlighted={message.id === highlightedMessageId} 
-              />
-            );
-          })
+          <div className="space-y-8">
+            {messages.map((message, index) => {
+              const isTyping = message.isAI && index === messages.length - 1 && aiTyping.isTyping;
+              return (
+                <ChatMessage 
+                  key={message.id} 
+                  message={message} 
+                  userAvatar={user?.avatar} 
+                  typing={isTyping ? {
+                    isActive: true,
+                    partialContent: aiTyping.partialMessage
+                  } : undefined} 
+                  isHighlighted={message.id === highlightedMessageId} 
+                />
+              );
+            })}
+          </div>
         )}
         
         {/* AI is typing indicator */}
         {isProcessing && !aiTyping.isTyping && (
           <div className={cn(
-            "flex items-center gap-2 animate-pulse opacity-80",
+            "flex items-center gap-2 animate-pulse opacity-80 mt-8",
             isMobile ? "ml-4" : "ml-10"
           )}>
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sightx-purple">

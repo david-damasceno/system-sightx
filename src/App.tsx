@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Index from "./pages/Index";
 import ChatWindow from "./pages/ChatWindow";
 import ChatHistory from "./pages/ChatHistory";
+import Data from "./pages/Data";
 import Profile from "./pages/Profile";
 import ModeContext from "./pages/ModeContext";
 import Analysis from "./pages/Analysis";
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="/chat" element={<ChatWindow />} />
                 <Route path="/chat/:id" element={<ChatWindow />} />
                 <Route path="/history" element={<ChatHistory />} />
+                <Route path="/data" element={<Data />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/mode-context" element={<ModeContext />} />
                 <Route path="/analysis" element={<Analysis />} />
