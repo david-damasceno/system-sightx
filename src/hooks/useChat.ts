@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
@@ -5,6 +6,10 @@ import { useMode } from "../contexts/ModeContext";
 import { supabase, schemaTable } from "@/integrations/supabase/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+
+// Constantes para a URL e chave do Supabase
+const SUPABASE_URL = "https://nhpqzxhbdiurhzjpghqz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocHF6eGhiZGl1cmh6anBnaHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5NTE2OTQsImV4cCI6MjA1OTUyNzY5NH0.vkZG5hKj81QChwxhKU1dpiCUzUGO1Mmj1DKJ3-y1pRM";
 
 interface AiTypingState {
   isTyping: boolean;
@@ -342,10 +347,10 @@ const useChat = (existingChatId?: string) => {
 
       if (useStreaming) {
         // Usar streaming para chat normal
-        const response = await fetch(`${supabase.supabaseUrl}/functions/v1/azure-openai-chat`, {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/azure-openai-chat`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${supabase.supabaseKey}`,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
