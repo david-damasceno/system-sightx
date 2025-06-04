@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect, FormEvent } from "react";
-import { SendHorizonal, Paperclip, X, Mic, Camera, Search, Lightbulb, Sparkles, RotateCcw, User, Briefcase } from "lucide-react";
+import { SendHorizonal, Paperclip, Mic, Search, Sparkles, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -25,7 +25,6 @@ const ChatInput = ({
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [originalMessage, setOriginalMessage] = useState("");
-  const [improvedMessage, setImprovedMessage] = useState("");
   const [isImproved, setIsImproved] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
@@ -46,13 +45,13 @@ const ChatInput = ({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if ((message.trim() || selectedFile) && !isProcessing) {
+    if ((message.trim() || selectedFile) && !isProcessing && !improvingMessage) {
+      console.log("ChatInput: Enviando mensagem:", message);
       onSendMessage(message, selectedFile || undefined);
       setMessage("");
       setSelectedFile(null);
       setIsImproved(false);
       setOriginalMessage("");
-      setImprovedMessage("");
 
       if (textareaRef.current) {
         textareaRef.current.style.height = "inherit";
@@ -64,10 +63,6 @@ const ChatInput = ({
     if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
       e.preventDefault();
       handleSubmit(e as unknown as FormEvent);
-    }
-
-    if (e.key === "Enter" && (e.shiftKey || e.ctrlKey)) {
-      setMessage(prev => prev + "\n");
     }
   };
 
@@ -91,13 +86,8 @@ const ChatInput = ({
   };
 
   const improveMessage = async () => {
-    if (!message.trim()) {
-      toast.error("Digite uma mensagem para melhorar");
-      return;
-    }
-
-    if (message.trim().length < 10) {
-      toast.error("A mensagem deve ter pelo menos 10 caracteres para ser melhorada");
+    if (!message.trim() || message.trim().length < 10) {
+      toast.error("Digite uma mensagem com pelo menos 10 caracteres");
       return;
     }
 
@@ -109,7 +99,6 @@ const ChatInput = ({
       const improvedText = await improveMessageAPI(message);
       
       if (improvedText && improvedText.trim() !== message.trim()) {
-        setImprovedMessage(improvedText);
         setMessage(improvedText);
         setIsImproved(true);
         toast.success("Mensagem melhorada com IA!");
@@ -128,10 +117,11 @@ const ChatInput = ({
     if (originalMessage) {
       setMessage(originalMessage);
       setIsImproved(false);
-      setImprovedMessage("");
       toast.info("Restaurada mensagem original");
     }
   };
+
+  const isDisabled = isProcessing || showVoiceRecorder || improvingMessage;
 
   return (
     <div className="border-t glass-panel bg-opacity-30 shadow-lg py-[10px] flex flex-col">
@@ -157,7 +147,7 @@ const ChatInput = ({
         <div className={cn(
           "relative flex items-end rounded-xl overflow-hidden border transition-all flex-1", 
           focused ? "ring-2 ring-sightx-purple" : "", 
-          isProcessing || improvingMessage ? "opacity-50" : ""
+          isDisabled ? "opacity-50" : ""
         )}>
           <Textarea 
             ref={textareaRef} 
@@ -169,13 +159,10 @@ const ChatInput = ({
               "pr-24 resize-none min-h-[56px] max-h-[200px] rounded-xl py-3.5 transition-all",
               isImproved && "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
             )}
-            disabled={isProcessing || showVoiceRecorder || improvingMessage} 
+            disabled={isDisabled} 
             rows={1} 
             onFocus={() => setFocused(true)} 
             onBlur={() => setFocused(false)} 
-            style={{
-              overflowY: "auto"
-            }}
           />
           <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
             <div className="flex gap-1">
@@ -188,7 +175,7 @@ const ChatInput = ({
                       variant="ghost" 
                       className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
                       onClick={() => fileInputRef.current?.click()} 
-                      disabled={isProcessing || showVoiceRecorder || improvingMessage}
+                      disabled={isDisabled}
                     >
                       <Paperclip className="h-4 w-4" />
                     </Button>
@@ -208,7 +195,7 @@ const ChatInput = ({
                       variant="ghost" 
                       className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
                       onClick={() => setShowVoiceRecorder(true)} 
-                      disabled={isProcessing || showVoiceRecorder || improvingMessage}
+                      disabled={isDisabled}
                     >
                       <Mic className="h-4 w-4" />
                     </Button>
@@ -228,7 +215,7 @@ const ChatInput = ({
                       variant="ghost" 
                       className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
                       onClick={onOpenSearch} 
-                      disabled={isProcessing || messages.length <= 1 || improvingMessage}
+                      disabled={isDisabled || messages.length <= 1}
                     >
                       <Search className="h-4 w-4" />
                     </Button>
@@ -239,7 +226,7 @@ const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
               
-              {!isImproved && message.trim() && message.trim().length >= 10 ? (
+              {!isImproved && message.trim().length >= 10 ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -247,12 +234,9 @@ const ChatInput = ({
                         type="button" 
                         size="icon" 
                         variant="ghost" 
-                        className={cn(
-                          "h-8 w-8 rounded-full transition-colors",
-                          improvingMessage ? "opacity-50" : "hover:bg-sightx-purple/10"
-                        )}
+                        className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors"
                         onClick={improveMessage}
-                        disabled={isProcessing || improvingMessage || message.trim().length < 10}
+                        disabled={isDisabled}
                       >
                         {improvingMessage ? (
                           <span className="animate-spin h-4 w-4 border-2 border-sightx-purple border-t-transparent rounded-full" />
@@ -276,7 +260,7 @@ const ChatInput = ({
                         variant="ghost" 
                         className="h-8 w-8 rounded-full hover:bg-sightx-purple/10 transition-colors" 
                         onClick={restoreOriginalMessage}
-                        disabled={isProcessing || improvingMessage}
+                        disabled={isDisabled}
                       >
                         <RotateCcw className="h-4 w-4" />
                       </Button>
@@ -294,11 +278,11 @@ const ChatInput = ({
               size="icon" 
               className={cn(
                 "rounded-full h-8 w-8 transition-all", 
-                !isProcessing && (message.trim() || selectedFile) ? 
+                !isDisabled && (message.trim() || selectedFile) ? 
                   "bg-sightx-purple hover:bg-sightx-purple-light" : 
                   "bg-muted text-muted-foreground"
               )} 
-              disabled={!message.trim() && !selectedFile || isProcessing || showVoiceRecorder || improvingMessage}
+              disabled={(!message.trim() && !selectedFile) || isDisabled}
             >
               <SendHorizonal className="h-4 w-4" />
             </Button>

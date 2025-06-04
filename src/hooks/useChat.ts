@@ -28,12 +28,12 @@ const useChat = (existingChatId?: string) => {
     progress: 0
   });
 
-  // Função para carregar as mensagens do esquema public
+  // Carrega o histórico de chat simplificado
   const loadChatSessions = async () => {
     if (!user) return;
     
     try {
-      console.log("Carregando sessões do esquema public");
+      console.log("Carregando sessões do chat");
       
       const { data: sessions, error } = await supabase
         .from('chat_sessions')
@@ -55,17 +55,6 @@ const useChat = (existingChatId?: string) => {
               .eq('session_id', session.id)
               .order('timestamp', { ascending: true });
               
-            if (messagesError) {
-              console.error("Erro ao buscar mensagens:", messagesError);
-              return {
-                id: session.id,
-                title: session.title,
-                messages: [],
-                createdAt: new Date(session.created_at),
-                updatedAt: new Date(session.updated_at)
-              };
-            }
-            
             const formattedMessages: Message[] = messageData?.map((msg: any) => ({
               id: msg.id,
               content: msg.content,
@@ -98,167 +87,57 @@ const useChat = (existingChatId?: string) => {
           if (existingChat) {
             setChatSession(existingChat);
             setMessages(existingChat.messages);
-            console.log(`Chat carregado: ${existingChat.title} com ${existingChat.messages.length} mensagens`);
-          } else {
-            const newSession: ChatSession = {
-              id: existingChatId,
-              title: "Nova conversa",
-              messages: [],
-              createdAt: new Date(),
-              updatedAt: new Date()
-            };
-            setChatSession(newSession);
-            setMessages([]);
-            console.log("Novo chat criado:", existingChatId);
+            console.log(`Chat carregado: ${existingChat.title}`);
           }
         }
       }
     } catch (error) {
-      console.error("Erro ao carregar histórico de chat:", error);
-      if (existingChatId) {
-        const mockSession: ChatSession = {
-          id: existingChatId,
-          title: "Nova conversa",
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        setChatSession(mockSession);
-        setMessages([]);
-      }
-    }
-  };
-
-  // Salvar nova sessão no esquema public
-  const saveNewSession = async (session: ChatSession) => {
-    if (!user) {
-      console.log("Usuário não autenticado");
-      return;
-    }
-    
-    try {
-      console.log("Salvando nova sessão no esquema public");
-      
-      const { error: sessionError } = await supabase
-        .from('chat_sessions')
-        .insert({
-          id: session.id,
-          title: session.title,
-          user_id: user.id,
-          created_at: session.createdAt.toISOString(),
-          updated_at: session.updatedAt.toISOString()
-        });
-        
-      if (sessionError) {
-        console.error("Erro ao salvar sessão:", sessionError);
-        return;
-      }
-      
-      console.log("Sessão salva com sucesso");
-    } catch (error) {
-      console.error("Erro ao salvar sessão:", error);
-    }
-  };
-
-  // Salvar mensagens no esquema public
-  const saveMessages = async (sessionId: string, newMessages: Message[]) => {
-    if (!user || newMessages.length === 0) {
-      console.log("Não é possível salvar mensagens:", { 
-        hasUser: !!user, 
-        messageCount: newMessages.length 
-      });
-      return;
-    }
-    
-    try {
-      console.log(`Salvando ${newMessages.length} mensagens no esquema public`);
-      
-      const messagesToInsert = newMessages.map(msg => ({
-        id: msg.id,
-        session_id: sessionId,
-        content: msg.content,
-        sender_id: msg.senderId,
-        is_ai: msg.isAI,
-        timestamp: msg.timestamp.toISOString(),
-        attachment: msg.attachment || null
-      }));
-      
-      const { error: messagesError } = await supabase
-        .from('chat_messages')
-        .insert(messagesToInsert);
-        
-      if (messagesError) {
-        console.error("Erro ao salvar mensagens:", messagesError);
-        return;
-      }
-      
-      console.log("Mensagens salvas com sucesso");
-      
-      const { error: updateError } = await supabase
-        .from('chat_sessions')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', sessionId);
-        
-      if (updateError) {
-        console.error("Erro ao atualizar sessão:", updateError);
-      }
-      
-    } catch (error) {
-      console.error("Erro ao salvar mensagens:", error);
+      console.error("Erro ao carregar histórico:", error);
     }
   };
 
   useEffect(() => {
     if (user) {
       loadChatSessions();
-    } else {
-      setChatHistory([]);
-      if (!existingChatId) {
-        setChatSession(null);
-        setMessages([]);
-      }
     }
-  }, [user, mode, existingChatId]);
+  }, [user, existingChatId]);
 
-  // Efeito de digitação do AI
+  // Efeito de digitação simplificado
   useEffect(() => {
+    if (!aiTyping.isTyping || !aiTyping.fullMessage) return;
+    
     let interval: number | null = null;
     
-    if (aiTyping.isTyping) {
-      interval = window.setInterval(() => {
-        setAiTyping(prev => {
-          const nextLen = Math.min(prev.fullMessage.length, prev.partialMessage.length + 2 + Math.floor(Math.random() * 3));
-          const nextPartial = prev.fullMessage.substring(0, nextLen);
-          const progress = nextLen / prev.fullMessage.length;
-          
-          if (nextLen === prev.fullMessage.length) {
-            if (interval) clearInterval(interval);
-            return {
-              ...prev, 
-              partialMessage: prev.fullMessage,
-              progress: 1,
-              isTyping: false
-            };
-          }
-          
+    interval = window.setInterval(() => {
+      setAiTyping(prev => {
+        const nextLen = Math.min(prev.fullMessage.length, prev.partialMessage.length + 3);
+        const nextPartial = prev.fullMessage.substring(0, nextLen);
+        
+        if (nextLen >= prev.fullMessage.length) {
+          if (interval) clearInterval(interval);
           return {
             ...prev,
-            partialMessage: nextPartial,
-            progress
+            partialMessage: prev.fullMessage,
+            isTyping: false
           };
-        });
-      }, 25);
-    }
+        }
+        
+        return {
+          ...prev,
+          partialMessage: nextPartial
+        };
+      });
+    }, 30);
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [aiTyping.isTyping]);
+  }, [aiTyping.isTyping, aiTyping.fullMessage]);
 
-  // Função para melhorar mensagem usando Azure OpenAI
+  // Função para melhorar mensagem
   const improveMessage = async (originalMessage: string): Promise<string> => {
     try {
-      console.log("Melhorando mensagem com Azure OpenAI...");
+      console.log("Melhorando mensagem...");
       
       const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
         body: {
@@ -269,65 +148,139 @@ const useChat = (existingChatId?: string) => {
         }
       });
 
-      if (error) {
-        console.error("Erro ao melhorar mensagem:", error);
-        throw error;
-      }
+      if (error) throw error;
+      if (!data?.message) throw new Error("Resposta inválida");
 
-      if (!data || !data.message) {
-        throw new Error("Resposta inválida da API para melhoria de mensagem");
-      }
-
-      console.log("Mensagem melhorada com sucesso");
       return data.message;
     } catch (e) {
       console.error("Erro ao melhorar mensagem:", e);
-      toast.error("Erro ao melhorar mensagem. Tentando novamente...");
       throw e;
     }
   };
 
-  // Função otimizada para chamar a API do Azure OpenAI com streaming
-  const callAzureOpenAI = async (content: string, messageHistory: Message[], useStreaming: boolean = true): Promise<string> => {
-    try {
-      console.log("Chamando Azure OpenAI Edge Function...");
-      
-      const formattedHistory = messageHistory.map(msg => ({
-        content: msg.content,
-        isAI: msg.isAI,
-      }));
+  // Função principal para enviar mensagem - SIMPLIFICADA
+  const sendMessage = async (content: string, file?: File) => {
+    if (!user) {
+      toast.error("Você precisa estar logado");
+      return;
+    }
 
-      console.log("Histórico formatado:", { 
-        messageCount: formattedHistory.length,
-        mode: mode,
-        streaming: useStreaming
+    console.log("=== ENVIANDO MENSAGEM ===");
+    console.log("Conteúdo:", content);
+    
+    setIsProcessing(true);
+    
+    try {
+      // 1. Criar ou usar sessão existente
+      let currentSession = chatSession;
+      
+      if (!currentSession) {
+        const sessionId = existingChatId || uuidv4();
+        const newSession: ChatSession = {
+          id: sessionId,
+          title: content.substring(0, 30) + "...",
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        // Salvar nova sessão no banco
+        const { error: sessionError } = await supabase
+          .from('chat_sessions')
+          .insert({
+            id: sessionId,
+            title: newSession.title,
+            user_id: user.id,
+            created_at: newSession.createdAt.toISOString(),
+            updated_at: newSession.updatedAt.toISOString()
+          });
+          
+        if (sessionError) {
+          console.error("Erro ao criar sessão:", sessionError);
+          throw sessionError;
+        }
+        
+        currentSession = newSession;
+        setChatSession(currentSession);
+        setChatHistory(prev => [currentSession!, ...prev]);
+        console.log("Nova sessão criada:", sessionId);
+      }
+
+      // 2. Criar mensagem do usuário
+      const userMessage: Message = {
+        id: uuidv4(),
+        content,
+        senderId: user.id,
+        timestamp: new Date(),
+        isAI: false,
+        ...(file && {
+          attachment: {
+            name: file.name,
+            type: file.type,
+            url: URL.createObjectURL(file)
+          }
+        })
+      };
+
+      // 3. Salvar mensagem do usuário no banco IMEDIATAMENTE
+      const { error: userMsgError } = await supabase
+        .from('chat_messages')
+        .insert({
+          id: userMessage.id,
+          session_id: currentSession.id,
+          content: userMessage.content,
+          sender_id: userMessage.senderId,
+          is_ai: false,
+          timestamp: userMessage.timestamp.toISOString(),
+          attachment: userMessage.attachment || null
+        });
+        
+      if (userMsgError) {
+        console.error("Erro ao salvar mensagem usuário:", userMsgError);
+        throw userMsgError;
+      }
+
+      // 4. Atualizar UI com mensagem do usuário
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      currentSession.messages = updatedMessages;
+
+      console.log("Mensagem do usuário salva, chamando IA...");
+
+      // 5. Chamar IA com streaming
+      const response = await fetch('https://nhpqzxhbdiurhzjpghqz.supabase.co/functions/v1/azure-openai-chat', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocHF6eGhiZGl1cmh6anBnaHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5NTE2OTQsImV4cCI6MjA1OTUyNzY5NH0.vkZG5hKj81QChwxhKU1dpiCUzUGO1Mmj1DKJ3-y1pRM`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: updatedMessages.map(msg => ({
+            content: msg.content,
+            isAI: msg.isAI,
+          })),
+          userMode: mode,
+          stream: true
+        })
       });
 
-      if (useStreaming) {
-        const response = await fetch('https://nhpqzxhbdiurhzjpghqz.supabase.co/functions/v1/azure-openai-chat', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocHF6eGhiZGl1cmh6anBnaHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5NTE2OTQsImV4cCI6MjA1OTUyNzY5NH0.vkZG5hKj81QChwxhKU1dpiCUzUGO1Mmj1DKJ3-y1pRM`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: formattedHistory,
-            userMode: mode,
-            stream: true
-          })
-        });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+      // 6. Processar resposta streaming
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedMessage = '';
 
-        if (!response.body) {
-          throw new Error("Response body is null");
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let accumulatedMessage = '';
+      if (reader) {
+        // Iniciar typing indicator
+        setAiTyping(prev => ({
+          ...prev,
+          isTyping: true,
+          partialMessage: '',
+          fullMessage: ''
+        }));
 
         try {
           while (true) {
@@ -344,11 +297,11 @@ const useChat = (existingChatId?: string) => {
                   if (data.content) {
                     accumulatedMessage += data.content;
                     
+                    // Atualizar o typing com a mensagem acumulada
                     setAiTyping(prev => ({
                       ...prev,
-                      partialMessage: accumulatedMessage,
                       fullMessage: accumulatedMessage,
-                      isTyping: true
+                      partialMessage: accumulatedMessage
                     }));
                   }
                 } catch (parseError) {
@@ -359,186 +312,87 @@ const useChat = (existingChatId?: string) => {
           }
         } finally {
           reader.releaseLock();
-          setAiTyping(prev => ({
-            ...prev,
-            isTyping: false
-          }));
         }
-
-        if (!accumulatedMessage) {
-          throw new Error("Nenhum conteúdo recebido do streaming");
-        }
-
-        return accumulatedMessage;
-      } else {
-        const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
-          body: {
-            messages: formattedHistory,
-            userMode: mode,
-            stream: false
-          }
-        });
-
-        if (error) {
-          console.error("Erro ao chamar Azure OpenAI via Edge Function:", error);
-          throw error;
-        }
-
-        if (!data || !data.message) {
-          console.error("Resposta inválida da Edge Function:", data);
-          throw new Error("Resposta inválida da API do Azure OpenAI");
-        }
-
-        console.log("Resposta da IA recebida com sucesso", {
-          messageLength: data.message.length,
-        });
-
-        return data.message;
       }
-    } catch (e) {
-      console.error("Erro no chat com Azure OpenAI:", e);
-      toast.error("Erro ao processar mensagem. Tentando novamente...");
-      throw e;
-    }
-  };
 
-  // Função principal para enviar mensagem
-  const sendMessage = async (content: string, file?: File) => {
-    if (!user) {
-      toast.error("Você precisa estar logado para enviar mensagens");
-      return;
-    }
-
-    console.log("Enviando mensagem:", content);
-
-    const userMessage: Message = {
-      id: uuidv4(),
-      content,
-      senderId: user.id,
-      timestamp: new Date(),
-      isAI: false,
-      ...(file && {
-        attachment: {
-          name: file.name,
-          type: file.type,
-          url: URL.createObjectURL(file)
-        }
-      })
-    };
-
-    const needNewSession = !chatSession;
-    let currentSession = chatSession;
-    
-    if (needNewSession) {
-      const sessionId = existingChatId || uuidv4();
-      currentSession = {
-        id: sessionId,
-        title: generateChatTitle(content),
-        messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setChatSession(currentSession);
-      console.log("Nova sessão criada:", sessionId);
-      
-      await saveNewSession(currentSession);
-      setChatHistory(prev => [currentSession!, ...prev]);
-    }
-
-    const updatedMessages = [...(currentSession?.messages || []), userMessage];
-    setMessages(updatedMessages);
-    
-    if (currentSession) {
-      currentSession.messages = updatedMessages;
-      currentSession.updatedAt = new Date();
-    }
-
-    setIsProcessing(true);
-
-    try {
-      console.log("Chamando Azure OpenAI para responder à mensagem");
-      
-      let aiResponse = await callAzureOpenAI(content, updatedMessages);
-      
-      if (file) {
-        aiResponse += `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
-      }
-      
-      const aiMessage: Message = {
-        id: uuidv4(),
-        content: aiResponse,
-        senderId: "ai",
-        timestamp: new Date(),
-        isAI: true,
-      };
-      
-      const finalMessages = [...updatedMessages, aiMessage];
-      setMessages(finalMessages);
-      
-      if (currentSession) {
-        currentSession.messages = finalMessages;
-        currentSession.updatedAt = new Date();
+      // 7. Criar e salvar mensagem da IA
+      if (accumulatedMessage) {
+        const aiMessage: Message = {
+          id: uuidv4(),
+          content: accumulatedMessage,
+          senderId: "ai",
+          timestamp: new Date(),
+          isAI: true,
+        };
         
+        // Salvar mensagem da IA no banco
+        const { error: aiMsgError } = await supabase
+          .from('chat_messages')
+          .insert({
+            id: aiMessage.id,
+            session_id: currentSession.id,
+            content: aiMessage.content,
+            sender_id: aiMessage.senderId,
+            is_ai: true,
+            timestamp: aiMessage.timestamp.toISOString()
+          });
+          
+        if (aiMsgError) {
+          console.error("Erro ao salvar mensagem IA:", aiMsgError);
+        }
+
+        // Atualizar UI
+        const finalMessages = [...updatedMessages, aiMessage];
+        setMessages(finalMessages);
+        currentSession.messages = finalMessages;
+        
+        // Atualizar histórico
         setChatHistory(prev => 
           prev.map(chat => 
             chat.id === currentSession!.id ? currentSession! : chat
           )
         );
+
+        console.log("=== MENSAGEM PROCESSADA COM SUCESSO ===");
       }
-      
-      await saveMessages(currentSession!.id, [userMessage, aiMessage]);
-      
-      console.log("Mensagem processada e salva com sucesso");
+
+      // 8. Parar typing indicator
+      setAiTyping(prev => ({
+        ...prev,
+        isTyping: false
+      }));
       
     } catch (error) {
-      console.error("Erro ao processar mensagem:", error);
+      console.error("=== ERRO NO PROCESSAMENTO ===", error);
       
+      // Criar mensagem de erro
       const errorMessage: Message = {
         id: uuidv4(),
-        content: "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente.",
+        content: "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.",
         senderId: "ai",
         timestamp: new Date(),
         isAI: true,
       };
       
-      const finalMessages = [...updatedMessages, errorMessage];
-      setMessages(finalMessages);
+      setMessages(prev => [...prev, errorMessage]);
       
-      if (currentSession) {
-        currentSession.messages = finalMessages;
-        currentSession.updatedAt = new Date();
-      }
+      setAiTyping(prev => ({
+        ...prev,
+        isTyping: false
+      }));
       
-      await saveMessages(currentSession!.id, [userMessage, errorMessage]);
-      
+      toast.error("Erro ao processar mensagem");
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const generateChatTitle = (firstMessage: string) => {
-    const words = firstMessage.split(" ");
-    const shortTitle = words.slice(0, 3).join(" ");
-    return shortTitle.length < 20 ? shortTitle : shortTitle.substring(0, 20) + "...";
   };
 
   const deleteChat = async (chatId: string) => {
     if (!user) return;
     
     try {
-      const { error: messagesError } = await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('session_id', chatId);
-        
-      if (messagesError) throw messagesError;
-      
-      const { error: sessionError } = await supabase
-        .from('chat_sessions')
-        .delete()
-        .eq('id', chatId);
-        
-      if (sessionError) throw sessionError;
+      await supabase.from('chat_messages').delete().eq('session_id', chatId);
+      await supabase.from('chat_sessions').delete().eq('id', chatId);
       
       setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
       
@@ -547,9 +401,9 @@ const useChat = (existingChatId?: string) => {
         setMessages([]);
       }
       
-      toast.success("Conversa excluída com sucesso");
+      toast.success("Conversa excluída");
     } catch (error) {
-      console.error("Erro ao excluir conversa:", error);
+      console.error("Erro ao excluir:", error);
       toast.error("Erro ao excluir conversa");
     }
   };
@@ -558,31 +412,17 @@ const useChat = (existingChatId?: string) => {
     if (!user) return;
     
     try {
-      const { error: messagesError } = await supabase
-        .from('chat_messages')
-        .delete()
-        .in(
-          'session_id', 
-          chatHistory.map(chat => chat.id)
-        );
-        
-      if (messagesError) throw messagesError;
-      
-      const { error: sessionsError } = await supabase
-        .from('chat_sessions')
-        .delete()
-        .eq('user_id', user.id);
-        
-      if (sessionsError) throw sessionsError;
+      await supabase.from('chat_messages').delete().in('session_id', chatHistory.map(chat => chat.id));
+      await supabase.from('chat_sessions').delete().eq('user_id', user.id);
       
       setChatHistory([]);
       setChatSession(null);
       setMessages([]);
       
-      toast.success("Todas as conversas foram excluídas");
+      toast.success("Histórico limpo");
     } catch (error) {
-      console.error("Erro ao limpar histórico:", error);
-      toast.error("Erro ao limpar histórico de conversas");
+      console.error("Erro ao limpar:", error);
+      toast.error("Erro ao limpar histórico");
     }
   };
 

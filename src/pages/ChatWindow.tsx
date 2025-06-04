@@ -21,7 +21,6 @@ const ChatWindow = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [hasScrolled, setHasScrolled] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -40,7 +39,6 @@ const ChatWindow = () => {
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
     const isAtBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 10;
     setAutoScroll(isAtBottom);
-    setHasScrolled(true);
     setShowScrollToBottom(!isAtBottom);
   };
 
@@ -51,7 +49,18 @@ const ChatWindow = () => {
         behavior: "smooth"
       });
     }
-  }, [messages, aiTyping.partialMessage, autoScroll]);
+  }, [messages, autoScroll]);
+
+  // Scroll to bottom when AI finishes typing
+  useEffect(() => {
+    if (!aiTyping.isTyping && autoScroll && messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth"
+        });
+      }, 100);
+    }
+  }, [aiTyping.isTyping, autoScroll]);
 
   // Scroll to bottom function
   const scrollToBottom = () => {
@@ -152,24 +161,37 @@ const ChatWindow = () => {
         ) : (
           <div className="space-y-8">
             {messages.map((message, index) => {
-              const isTyping = message.isAI && index === messages.length - 1 && aiTyping.isTyping;
               return (
                 <ChatMessage 
                   key={message.id} 
                   message={message} 
                   userAvatar={user?.avatar} 
-                  typing={isTyping ? {
-                    isActive: true,
-                    partialContent: aiTyping.partialMessage
-                  } : undefined} 
                   isHighlighted={message.id === highlightedMessageId} 
                 />
               );
             })}
+            
+            {/* AI typing indicator quando está digitando */}
+            {aiTyping.isTyping && (
+              <ChatMessage 
+                message={{
+                  id: 'typing',
+                  content: aiTyping.partialMessage,
+                  senderId: 'ai',
+                  timestamp: new Date(),
+                  isAI: true
+                }}
+                userAvatar={user?.avatar}
+                typing={{
+                  isActive: true,
+                  partialContent: aiTyping.partialMessage
+                }}
+              />
+            )}
           </div>
         )}
         
-        {/* AI is typing indicator */}
+        {/* AI is processing indicator */}
         {isProcessing && !aiTyping.isTyping && (
           <div className={cn(
             "flex items-center gap-2 animate-pulse opacity-80 mt-8",
