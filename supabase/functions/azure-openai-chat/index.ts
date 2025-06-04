@@ -41,7 +41,7 @@ serve(async (req) => {
     const requestData = await req.json();
     const { messages, userMode, tenantId, stream = false, improveMessage = false } = requestData;
 
-    // Log para debugar multi-tenant
+    // Log para debugar
     console.log(`Recebendo requisição para tenant: ${tenantId || 'default'}, modo: ${userMode}, melhoria: ${improveMessage}`);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -84,6 +84,7 @@ Diretrizes para melhoria:
         { role: "system", content: systemPrompt },
         { role: "user", content: `Melhore esta mensagem: "${lastUserMessage.content}"` }
       ];
+      console.log("Processando melhoria de mensagem:", lastUserMessage.content);
     } else {
       formattedMessages = [
         { role: "system", content: systemPrompt },
@@ -112,7 +113,7 @@ Diretrizes para melhoria:
       frequency_penalty: 0.1,
       presence_penalty: 0.1,
       max_tokens: improveMessage ? 500 : 2048,
-      stream: stream && !improveMessage,
+      stream: false, // Sempre false para melhoria de mensagem
     };
 
     // Fazer a solicitação para a API do Azure OpenAI
@@ -139,98 +140,42 @@ Diretrizes para melhoria:
       );
     }
 
-    // Se estivermos usando streaming (apenas para chat normal)
-    if (stream && !improveMessage) {
-      console.log("Processando stream da Azure OpenAI");
-      
-      // Criar um stream processado que extrai apenas o conteúdo
-      const processedStream = new ReadableStream({
-        async start(controller) {
-          const reader = openaiResponse.body!.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-          
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
-              
-              for (const line of lines) {
-                if (line.trim() === '') continue;
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6);
-                  if (data === '[DONE]') {
-                    controller.close();
-                    return;
-                  }
-                  
-                  try {
-                    const parsed = JSON.parse(data);
-                    if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content) {
-                      // Enviar apenas o conteúdo processado
-                      const content = parsed.choices[0].delta.content;
-                      controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content })}\n\n`));
-                    }
-                  } catch (parseError) {
-                    console.error("Erro ao processar chunk do stream:", parseError);
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Erro no processamento do stream:", error);
-            controller.error(error);
-          } finally {
-            reader.releaseLock();
-          }
-        }
-      });
-      
-      return new Response(processedStream, {
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          "Connection": "keep-alive"
-        }
-      });
-    } else {
-      // Modo não-streaming: retorna a resposta completa
-      const data = await openaiResponse.json();
-      console.log("Resposta da Azure OpenAI recebida:", {
-        status: openaiResponse.status,
-        hasChoices: data.choices && data.choices.length > 0,
-        tenantId: tenantId || 'default',
-        improveMessage: improveMessage
-      });
+    // Processar resposta (sempre não-streaming para melhorias e chat normal para agora)
+    const data = await openaiResponse.json();
+    console.log("Resposta da Azure OpenAI recebida:", {
+      status: openaiResponse.status,
+      hasChoices: data.choices && data.choices.length > 0,
+      tenantId: tenantId || 'default',
+      improveMessage: improveMessage
+    });
 
-      if (!data.choices || data.choices.length === 0) {
-        console.error("Resposta sem choices:", data);
-        return new Response(
-          JSON.stringify({ 
-            message: "O serviço de IA não retornou uma resposta válida. Por favor, tente novamente." 
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      const aiMessage = data.choices[0].message.content;
-      console.log("Mensagem da IA:", aiMessage.substring(0, 100) + "...");
-
+    if (!data.choices || data.choices.length === 0) {
+      console.error("Resposta sem choices:", data);
       return new Response(
-        JSON.stringify({ message: aiMessage }),
+        JSON.stringify({ 
+          message: "O serviço de IA não retornou uma resposta válida. Por favor, tente novamente." 
+        }),
         {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+
+    const aiMessage = data.choices[0].message.content;
+    
+    if (improveMessage) {
+      console.log("Mensagem melhorada:", aiMessage);
+    } else {
+      console.log("Mensagem da IA:", aiMessage.substring(0, 100) + "...");
+    }
+
+    return new Response(
+      JSON.stringify({ message: aiMessage }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
     
   } catch (error) {
     console.error("Erro na função azure-openai-chat:", error);

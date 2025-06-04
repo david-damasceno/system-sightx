@@ -137,7 +137,7 @@ const useChat = (existingChatId?: string) => {
   // Função para melhorar mensagem
   const improveMessage = async (originalMessage: string): Promise<string> => {
     try {
-      console.log("Melhorando mensagem...");
+      console.log("Melhorando mensagem:", originalMessage);
       
       const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
         body: {
@@ -148,9 +148,19 @@ const useChat = (existingChatId?: string) => {
         }
       });
 
-      if (error) throw error;
-      if (!data?.message) throw new Error("Resposta inválida");
+      console.log("Resposta da melhoria:", { data, error });
 
+      if (error) {
+        console.error("Erro na edge function:", error);
+        throw new Error(`Erro na API: ${error.message || 'Erro desconhecido'}`);
+      }
+      
+      if (!data?.message) {
+        console.error("Resposta inválida:", data);
+        throw new Error("Resposta inválida da IA");
+      }
+
+      console.log("Mensagem melhorada recebida:", data.message);
       return data.message;
     } catch (e) {
       console.error("Erro ao melhorar mensagem:", e);
