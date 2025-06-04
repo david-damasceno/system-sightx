@@ -28,7 +28,7 @@ const useChat = (existingChatId?: string) => {
     progress: 0
   });
 
-  // Carrega o histórico de chat simplificado
+  // Carrega o histórico de chat
   const loadChatSessions = async () => {
     if (!user) return;
     
@@ -102,7 +102,7 @@ const useChat = (existingChatId?: string) => {
     }
   }, [user, existingChatId]);
 
-  // Efeito de digitação simplificado
+  // Efeito de digitação
   useEffect(() => {
     if (!aiTyping.isTyping || !aiTyping.fullMessage) return;
     
@@ -110,7 +110,7 @@ const useChat = (existingChatId?: string) => {
     
     interval = window.setInterval(() => {
       setAiTyping(prev => {
-        const nextLen = Math.min(prev.fullMessage.length, prev.partialMessage.length + 3);
+        const nextLen = Math.min(prev.fullMessage.length, prev.partialMessage.length + 2);
         const nextPartial = prev.fullMessage.substring(0, nextLen);
         
         if (nextLen >= prev.fullMessage.length) {
@@ -127,7 +127,7 @@ const useChat = (existingChatId?: string) => {
           partialMessage: nextPartial
         };
       });
-    }, 30);
+    }, 50);
     
     return () => {
       if (interval) clearInterval(interval);
@@ -158,10 +158,15 @@ const useChat = (existingChatId?: string) => {
     }
   };
 
-  // Função principal para enviar mensagem - SIMPLIFICADA
+  // Função principal para enviar mensagem
   const sendMessage = async (content: string, file?: File) => {
     if (!user) {
       toast.error("Você precisa estar logado");
+      return;
+    }
+
+    if (!content.trim()) {
+      toast.error("Digite uma mensagem");
       return;
     }
 
@@ -178,7 +183,7 @@ const useChat = (existingChatId?: string) => {
         const sessionId = existingChatId || uuidv4();
         const newSession: ChatSession = {
           id: sessionId,
-          title: content.substring(0, 30) + "...",
+          title: content.substring(0, 50) + (content.length > 50 ? "..." : ""),
           messages: [],
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -202,7 +207,6 @@ const useChat = (existingChatId?: string) => {
         
         currentSession = newSession;
         setChatSession(currentSession);
-        setChatHistory(prev => [currentSession!, ...prev]);
         console.log("Nova sessão criada:", sessionId);
       }
 
@@ -222,7 +226,7 @@ const useChat = (existingChatId?: string) => {
         })
       };
 
-      // 3. Salvar mensagem do usuário no banco IMEDIATAMENTE
+      // 3. Salvar mensagem do usuário no banco
       const { error: userMsgError } = await supabase
         .from('chat_messages')
         .insert({
@@ -247,79 +251,32 @@ const useChat = (existingChatId?: string) => {
 
       console.log("Mensagem do usuário salva, chamando IA...");
 
-      // 5. Chamar IA com streaming
-      const response = await fetch('https://nhpqzxhbdiurhzjpghqz.supabase.co/functions/v1/azure-openai-chat', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocHF6eGhiZGl1cmh6anBnaHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5NTE2OTQsImV4cCI6MjA1OTUyNzY5NH0.vkZG5hKj81QChwxhKU1dpiCUzUGO1Mmj1DKJ3-y1pRM`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: updatedMessages.map(msg => ({
-            content: msg.content,
-            isAI: msg.isAI,
-          })),
-          userMode: mode,
-          stream: true
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // 6. Processar resposta streaming
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedMessage = '';
-
-      if (reader) {
-        // Iniciar typing indicator
-        setAiTyping(prev => ({
-          ...prev,
-          isTyping: true,
-          partialMessage: '',
-          fullMessage: ''
-        }));
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  if (data.content) {
-                    accumulatedMessage += data.content;
-                    
-                    // Atualizar o typing com a mensagem acumulada
-                    setAiTyping(prev => ({
-                      ...prev,
-                      fullMessage: accumulatedMessage,
-                      partialMessage: accumulatedMessage
-                    }));
-                  }
-                } catch (parseError) {
-                  console.error("Erro ao processar chunk:", parseError);
-                }
-              }
-            }
+      // 5. Chamar IA
+      try {
+        const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
+          body: {
+            messages: updatedMessages.map(msg => ({
+              content: msg.content,
+              isAI: msg.isAI,
+            })),
+            userMode: mode,
+            stream: false
           }
-        } finally {
-          reader.releaseLock();
-        }
-      }
+        });
 
-      // 7. Criar e salvar mensagem da IA
-      if (accumulatedMessage) {
+        if (error) {
+          console.error("Erro da edge function:", error);
+          throw error;
+        }
+
+        if (!data?.message) {
+          throw new Error("Resposta inválida da IA");
+        }
+
+        // 6. Criar e salvar mensagem da IA
         const aiMessage: Message = {
           id: uuidv4(),
-          content: accumulatedMessage,
+          content: data.message,
           senderId: "ai",
           timestamp: new Date(),
           isAI: true,
@@ -346,41 +303,46 @@ const useChat = (existingChatId?: string) => {
         setMessages(finalMessages);
         currentSession.messages = finalMessages;
         
+        // Atualizar sessão no banco
+        await supabase
+          .from('chat_sessions')
+          .update({
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentSession.id);
+        
         // Atualizar histórico
-        setChatHistory(prev => 
-          prev.map(chat => 
-            chat.id === currentSession!.id ? currentSession! : chat
-          )
-        );
+        setChatHistory(prev => {
+          const existingIndex = prev.findIndex(chat => chat.id === currentSession!.id);
+          if (existingIndex >= 0) {
+            const updated = [...prev];
+            updated[existingIndex] = currentSession!;
+            return updated;
+          } else {
+            return [currentSession!, ...prev];
+          }
+        });
 
         console.log("=== MENSAGEM PROCESSADA COM SUCESSO ===");
+        
+      } catch (aiError) {
+        console.error("=== ERRO AO CHAMAR IA ===", aiError);
+        
+        // Criar mensagem de erro
+        const errorMessage: Message = {
+          id: uuidv4(),
+          content: "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente em alguns instantes.",
+          senderId: "ai",
+          timestamp: new Date(),
+          isAI: true,
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
+        toast.error("Erro na resposta da IA. Tente novamente.");
       }
-
-      // 8. Parar typing indicator
-      setAiTyping(prev => ({
-        ...prev,
-        isTyping: false
-      }));
       
     } catch (error) {
-      console.error("=== ERRO NO PROCESSAMENTO ===", error);
-      
-      // Criar mensagem de erro
-      const errorMessage: Message = {
-        id: uuidv4(),
-        content: "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.",
-        senderId: "ai",
-        timestamp: new Date(),
-        isAI: true,
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-      
-      setAiTyping(prev => ({
-        ...prev,
-        isTyping: false
-      }));
-      
+      console.error("=== ERRO GERAL ===", error);
       toast.error("Erro ao processar mensagem");
     } finally {
       setIsProcessing(false);

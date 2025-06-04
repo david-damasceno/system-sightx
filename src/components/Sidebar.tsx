@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, History, User, LogOut, Menu, X, Plus, ChevronRight, Settings, BellRing, HelpCircle, Moon, Sun, BarChart, Bookmark, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { MessageSquare, History, User, LogOut, Menu, X, Plus, ChevronRight, Settings, BellRing, HelpCircle, Moon, Sun, BarChart, Bookmark, PanelLeftOpen, PanelLeftClose, Database } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -182,6 +182,9 @@ const Sidebar = () => {
                 <NavItem to="/analysis" icon={BarChart} isCompact={true}>
                   Análises
                 </NavItem>
+                <NavItem to="/data" icon={Database} isCompact={true}>
+                  Dados
+                </NavItem>
                 <NavItem to="/profile" icon={User} isCompact={true}>
                   Perfil
                 </NavItem>
@@ -199,6 +202,9 @@ const Sidebar = () => {
                 </NavItem>
                 <NavItem to="/analysis" icon={BarChart}>
                   Análises
+                </NavItem>
+                <NavItem to="/data" icon={Database}>
+                  Dados
                 </NavItem>
                 <NavItem to="/profile" icon={User}>
                   Perfil
