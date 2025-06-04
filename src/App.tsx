@@ -13,7 +13,7 @@ import ChatWindow from "./pages/ChatWindow";
 import ChatHistory from "./pages/ChatHistory";
 import Data from "./pages/Data";
 import Profile from "./pages/Profile";
-import ModeContext from "./pages/ModeContext";
+import Context from "./pages/Context";
 import Analysis from "./pages/Analysis";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -43,7 +43,7 @@ const App = () => (
                 <Route path="/history" element={<ChatHistory />} />
                 <Route path="/data" element={<Data />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/mode-context" element={<ModeContext />} />
+                <Route path="/context" element={<Context />} />
                 <Route path="/analysis" element={<Analysis />} />
               </Route>
 

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { SendHorizonal, Paperclip, X, Mic, Camera, Search, Lightbulb, Sparkles, RotateCcw, User, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,10 +34,8 @@ const ChatInput = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  // Hook para usar a função de melhoria
   const { improveMessage: improveMessageAPI } = useChat();
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "inherit";
@@ -55,7 +54,6 @@ const ChatInput = ({
       setOriginalMessage("");
       setImprovedMessage("");
 
-      // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = "inherit";
       }
@@ -68,7 +66,6 @@ const ChatInput = ({
       handleSubmit(e as unknown as FormEvent);
     }
 
-    // Add new line with Shift+Enter or Ctrl+Enter
     if (e.key === "Enter" && (e.shiftKey || e.ctrlKey)) {
       setMessage(prev => prev + "\n");
     }
@@ -78,7 +75,6 @@ const ChatInput = ({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        // 10MB limit
         toast.error("Arquivo muito grande! Máximo de 10MB permitido.");
         return;
       }
@@ -94,7 +90,6 @@ const ChatInput = ({
     toast.success("Áudio gravado com sucesso!");
   };
 
-  // Função finalizada para melhorar mensagem usando Azure OpenAI
   const improveMessage = async () => {
     if (!message.trim()) {
       toast.error("Digite uma mensagem para melhorar");
@@ -140,7 +135,6 @@ const ChatInput = ({
 
   return (
     <div className="border-t glass-panel bg-opacity-30 shadow-lg py-[10px] flex flex-col">
-      {/* Voice recorder */}
       {showVoiceRecorder && (
         <div className="px-[100px] mb-3">
           <VoiceRecorder 
@@ -150,7 +144,6 @@ const ChatInput = ({
         </div>
       )}
 
-      {/* File preview */}
       {selectedFile && (
         <div className="px-[100px] mb-2">
           <FilePreview 
@@ -160,7 +153,6 @@ const ChatInput = ({
         </div>
       )}
 
-      {/* Input area */}
       <form onSubmit={handleSubmit} className="p-4 px-[100px] flex items-center justify-between">
         <div className={cn(
           "relative flex items-end rounded-xl overflow-hidden border transition-all flex-1", 
@@ -186,9 +178,7 @@ const ChatInput = ({
             }}
           />
           <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
-            {/* Tools */}
             <div className="flex gap-1">
-              {/* Attach file */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -209,7 +199,6 @@ const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
               
-              {/* Voice recorder */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -230,7 +219,6 @@ const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
               
-              {/* Search */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -251,7 +239,6 @@ const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
               
-              {/* Improve message */}
               {!isImproved && message.trim() && message.trim().length >= 10 ? (
                 <TooltipProvider>
                   <Tooltip>
@@ -302,7 +289,6 @@ const ChatInput = ({
               ) : null}
             </div>
             
-            {/* Send button */}
             <Button 
               type="submit" 
               size="icon" 
@@ -326,7 +312,6 @@ const ChatInput = ({
           />
         </div>
         
-        {/* Helper text */}
         <div className="mt-2 absolute bottom-1 left-[100px] flex justify-between items-center text-xs text-muted-foreground">
           <div>
             <span className="opacity-70">

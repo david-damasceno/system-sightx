@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
@@ -5,10 +6,6 @@ import { useMode } from "../contexts/ModeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
-
-// Constantes para a URL e chave do Supabase
-const SUPABASE_URL = "https://nhpqzxhbdiurhzjpghqz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocHF6eGhiZGl1cmh6anBnaHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5NTE2OTQsImV4cCI6MjA1OTUyNzY5NH0.vkZG5hKj81QChwxhKU1dpiCUzUGO1Mmj1DKJ3-y1pRM";
 
 interface AiTypingState {
   isTyping: boolean;
@@ -36,11 +33,6 @@ const useChat = (existingChatId?: string) => {
     if (!user) return;
     
     try {
-      // Se temos um ID específico de chat e já possuímos mensagens, não precisamos recarregar
-      if (existingChatId && messages.length > 0) {
-        return;
-      }
-      
       console.log("Carregando sessões do esquema public");
       
       const { data: sessions, error } = await supabase
@@ -55,10 +47,8 @@ const useChat = (existingChatId?: string) => {
       }
 
       if (sessions) {
-        // Converter os dados para o formato esperado
         const formattedSessions: ChatSession[] = await Promise.all(
           sessions.map(async (session: any) => {
-            // Carregar mensagens para cada sessão
             const { data: messageData, error: messagesError } = await supabase
               .from('chat_messages')
               .select('*')
@@ -76,7 +66,6 @@ const useChat = (existingChatId?: string) => {
               };
             }
             
-            // Formatar mensagens
             const formattedMessages: Message[] = messageData?.map((msg: any) => ({
               id: msg.id,
               content: msg.content,
@@ -104,7 +93,6 @@ const useChat = (existingChatId?: string) => {
         
         setChatHistory(formattedSessions);
         
-        // Se temos um ID específico de chat, carregamos ele
         if (existingChatId) {
           const existingChat = formattedSessions.find(c => c.id === existingChatId);
           if (existingChat) {
@@ -112,7 +100,6 @@ const useChat = (existingChatId?: string) => {
             setMessages(existingChat.messages);
             console.log(`Chat carregado: ${existingChat.title} com ${existingChat.messages.length} mensagens`);
           } else {
-            // Se não encontramos, criamos um novo chat
             const newSession: ChatSession = {
               id: existingChatId,
               title: "Nova conversa",
@@ -152,7 +139,6 @@ const useChat = (existingChatId?: string) => {
     try {
       console.log("Salvando nova sessão no esquema public");
       
-      // Salvar sessão
       const { error: sessionError } = await supabase
         .from('chat_sessions')
         .insert({
@@ -208,7 +194,6 @@ const useChat = (existingChatId?: string) => {
       
       console.log("Mensagens salvas com sucesso");
       
-      // Atualizar timestamp da sessão
       const { error: updateError } = await supabase
         .from('chat_sessions')
         .update({ updated_at: new Date().toISOString() })
@@ -223,7 +208,6 @@ const useChat = (existingChatId?: string) => {
     }
   };
 
-  // Carregar histórico de chat quando o usuário ou modo mudar
   useEffect(() => {
     if (user) {
       loadChatSessions();
@@ -247,7 +231,6 @@ const useChat = (existingChatId?: string) => {
           const nextPartial = prev.fullMessage.substring(0, nextLen);
           const progress = nextLen / prev.fullMessage.length;
           
-          // Se completou, para o intervalo
           if (nextLen === prev.fullMessage.length) {
             if (interval) clearInterval(interval);
             return {
@@ -321,11 +304,10 @@ const useChat = (existingChatId?: string) => {
       });
 
       if (useStreaming) {
-        // Usar streaming para chat normal
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/azure-openai-chat`, {
+        const response = await fetch('https://nhpqzxhbdiurhzjpghqz.supabase.co/functions/v1/azure-openai-chat', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocHF6eGhiZGl1cmh6anBnaHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5NTE2OTQsImV4cCI6MjA1OTUyNzY5NH0.vkZG5hKj81QChwxhKU1dpiCUzUGO1Mmj1DKJ3-y1pRM`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -362,7 +344,6 @@ const useChat = (existingChatId?: string) => {
                   if (data.content) {
                     accumulatedMessage += data.content;
                     
-                    // Atualizar estado de digitação
                     setAiTyping(prev => ({
                       ...prev,
                       partialMessage: accumulatedMessage,
@@ -378,7 +359,6 @@ const useChat = (existingChatId?: string) => {
           }
         } finally {
           reader.releaseLock();
-          // Finalizar digitação
           setAiTyping(prev => ({
             ...prev,
             isTyping: false
@@ -391,7 +371,6 @@ const useChat = (existingChatId?: string) => {
 
         return accumulatedMessage;
       } else {
-        // Usar chamada não-streaming para melhoria de mensagem
         const { data, error } = await supabase.functions.invoke('azure-openai-chat', {
           body: {
             messages: formattedHistory,
@@ -432,7 +411,6 @@ const useChat = (existingChatId?: string) => {
 
     console.log("Enviando mensagem:", content);
 
-    // Criar mensagem do usuário com anexo opcional
     const userMessage: Message = {
       id: uuidv4(),
       content,
@@ -448,12 +426,10 @@ const useChat = (existingChatId?: string) => {
       })
     };
 
-    // Verificar se precisamos criar uma nova sessão
     const needNewSession = !chatSession;
     let currentSession = chatSession;
     
     if (needNewSession) {
-      // Criar nova sessão
       const sessionId = existingChatId || uuidv4();
       currentSession = {
         id: sessionId,
@@ -465,38 +441,29 @@ const useChat = (existingChatId?: string) => {
       setChatSession(currentSession);
       console.log("Nova sessão criada:", sessionId);
       
-      // Salvar nova sessão
       await saveNewSession(currentSession);
-      
-      // Adicionar ao histórico local
       setChatHistory(prev => [currentSession!, ...prev]);
     }
 
-    // Adicionar mensagem do usuário
     const updatedMessages = [...(currentSession?.messages || []), userMessage];
     setMessages(updatedMessages);
     
-    // Atualizar sessão local
     if (currentSession) {
       currentSession.messages = updatedMessages;
       currentSession.updatedAt = new Date();
     }
 
-    // Iniciar processamento do AI
     setIsProcessing(true);
 
     try {
       console.log("Chamando Azure OpenAI para responder à mensagem");
       
-      // Chamar a API do Azure OpenAI para obter resposta
       let aiResponse = await callAzureOpenAI(content, updatedMessages);
       
-      // Adicionar comentário sobre arquivo se houver
       if (file) {
         aiResponse += `\n\nVi que você anexou um arquivo "${file.name}". Posso analisar seu conteúdo.`;
       }
       
-      // Criar mensagem do AI
       const aiMessage: Message = {
         id: uuidv4(),
         content: aiResponse,
@@ -505,16 +472,13 @@ const useChat = (existingChatId?: string) => {
         isAI: true,
       };
       
-      // Atualizar mensagens com resposta da IA
       const finalMessages = [...updatedMessages, aiMessage];
       setMessages(finalMessages);
       
-      // Atualizar sessão local
       if (currentSession) {
         currentSession.messages = finalMessages;
         currentSession.updatedAt = new Date();
         
-        // Atualizar histórico local
         setChatHistory(prev => 
           prev.map(chat => 
             chat.id === currentSession!.id ? currentSession! : chat
@@ -522,7 +486,6 @@ const useChat = (existingChatId?: string) => {
         );
       }
       
-      // Salvar as novas mensagens (usuário + AI)
       await saveMessages(currentSession!.id, [userMessage, aiMessage]);
       
       console.log("Mensagem processada e salva com sucesso");
@@ -530,7 +493,6 @@ const useChat = (existingChatId?: string) => {
     } catch (error) {
       console.error("Erro ao processar mensagem:", error);
       
-      // Adicionar mensagem de erro como resposta do AI
       const errorMessage: Message = {
         id: uuidv4(),
         content: "Desculpe, ocorreu um problema ao processar sua mensagem. Por favor, tente novamente.",
@@ -542,13 +504,11 @@ const useChat = (existingChatId?: string) => {
       const finalMessages = [...updatedMessages, errorMessage];
       setMessages(finalMessages);
       
-      // Atualizar sessão local
       if (currentSession) {
         currentSession.messages = finalMessages;
         currentSession.updatedAt = new Date();
       }
       
-      // Salvar mensagens mesmo com erro
       await saveMessages(currentSession!.id, [userMessage, errorMessage]);
       
     } finally {
@@ -557,7 +517,6 @@ const useChat = (existingChatId?: string) => {
   };
 
   const generateChatTitle = (firstMessage: string) => {
-    // Gerar um título a partir das primeiras palavras
     const words = firstMessage.split(" ");
     const shortTitle = words.slice(0, 3).join(" ");
     return shortTitle.length < 20 ? shortTitle : shortTitle.substring(0, 20) + "...";
@@ -567,7 +526,6 @@ const useChat = (existingChatId?: string) => {
     if (!user) return;
     
     try {
-      // Excluir mensagens primeiro (devido à restrição de chave estrangeira)
       const { error: messagesError } = await supabase
         .from('chat_messages')
         .delete()
@@ -575,7 +533,6 @@ const useChat = (existingChatId?: string) => {
         
       if (messagesError) throw messagesError;
       
-      // Excluir a sessão
       const { error: sessionError } = await supabase
         .from('chat_sessions')
         .delete()
@@ -583,10 +540,8 @@ const useChat = (existingChatId?: string) => {
         
       if (sessionError) throw sessionError;
       
-      // Remover do histórico local
       setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
       
-      // Limpar sessão atual se foi a que excluímos
       if (chatSession?.id === chatId) {
         setChatSession(null);
         setMessages([]);
@@ -603,7 +558,6 @@ const useChat = (existingChatId?: string) => {
     if (!user) return;
     
     try {
-      // Excluir todas as mensagens do usuário
       const { error: messagesError } = await supabase
         .from('chat_messages')
         .delete()
@@ -614,7 +568,6 @@ const useChat = (existingChatId?: string) => {
         
       if (messagesError) throw messagesError;
       
-      // Excluir todas as sessões do usuário
       const { error: sessionsError } = await supabase
         .from('chat_sessions')
         .delete()
@@ -622,7 +575,6 @@ const useChat = (existingChatId?: string) => {
         
       if (sessionsError) throw sessionsError;
       
-      // Limpar estados locais
       setChatHistory([]);
       setChatSession(null);
       setMessages([]);
