@@ -39,7 +39,14 @@ serve(async (req) => {
 
     // Extrair dados da solicitação
     const requestData = await req.json();
-    const { messages, userMode, tenantId, stream = false, improveMessage = false } = requestData;
+    const { 
+      messages, 
+      userMode, 
+      tenantId, 
+      stream = false, 
+      improveMessage = false,
+      improvementType = "general" 
+    } = requestData;
 
     // Log para debugar
     console.log(`Recebendo requisição para tenant: ${tenantId || 'default'}, modo: ${userMode}, melhoria: ${improveMessage}`);
@@ -61,7 +68,58 @@ serve(async (req) => {
     let systemPrompt;
     
     if (improveMessage) {
-      systemPrompt = `Você é um especialista em comunicação empresarial do SightX. Sua função é melhorar mensagens para torná-las mais claras, profissionais e eficazes para o contexto de negócios.
+      // Escolher prompt de melhoria baseado no tipo
+      switch (improvementType) {
+        case "formal":
+          systemPrompt = `Você é um especialista em comunicação empresarial do SightX. Sua função é melhorar mensagens para torná-las mais formais e profissionais para o ambiente de negócios.
+
+Diretrizes para melhoria:
+- Use linguagem formal e técnica
+- Evite gírias, expressões coloquiais e contrações
+- Inclua termos técnicos apropriados para análise de dados
+- Estruture o texto em parágrafos lógicos
+- Mantenha o conteúdo original da mensagem
+- Retorne APENAS a mensagem melhorada, sem explicações adicionais`;
+          break;
+
+        case "persuasive":
+          systemPrompt = `Você é um especialista em comunicação persuasiva do SightX. Sua função é melhorar mensagens para torná-las mais convincentes e impactantes.
+
+Diretrizes para melhoria:
+- Use linguagem persuasiva e convincente
+- Destaque benefícios e valor agregado
+- Inclua dados e fatos que reforcem os argumentos
+- Utilize apelos emocionais estratégicos
+- Mantenha o conteúdo original da mensagem
+- Retorne APENAS a mensagem melhorada, sem explicações adicionais`;
+          break;
+
+        case "concise":
+          systemPrompt = `Você é um especialista em comunicação concisa do SightX. Sua função é melhorar mensagens para torná-las mais diretas e objetivas.
+
+Diretrizes para melhoria:
+- Reduza a mensagem ao essencial sem perder o significado
+- Elimine palavras desnecessárias e redundâncias
+- Use frases curtas e diretas
+- Priorize informações cruciais
+- Mantenha o conteúdo original da mensagem
+- Retorne APENAS a mensagem melhorada, sem explicações adicionais`;
+          break;
+
+        case "friendly":
+          systemPrompt = `Você é um especialista em comunicação amigável do SightX. Sua função é melhorar mensagens para torná-las mais calorosas e acessíveis.
+
+Diretrizes para melhoria:
+- Use um tom cordial e conversacional
+- Adicione elementos pessoais quando apropriado
+- Mantenha a clareza e profissionalismo
+- Use linguagem inclusiva e acessível
+- Mantenha o conteúdo original da mensagem
+- Retorne APENAS a mensagem melhorada, sem explicações adicionais`;
+          break;
+
+        default: // general
+          systemPrompt = `Você é um especialista em comunicação empresarial do SightX. Sua função é melhorar mensagens para torná-las mais claras, profissionais e eficazes para o contexto de negócios.
 
 Diretrizes para melhoria:
 - Torne a linguagem mais formal e profissional
@@ -70,6 +128,7 @@ Diretrizes para melhoria:
 - Mantenha o sentido original da mensagem
 - Use terminologia apropriada para análise de dados e business intelligence
 - Retorne APENAS a mensagem melhorada, sem explicações adicionais`;
+      }
     } else {
       systemPrompt = "Você é um assistente de IA especializado em negócios do SightX. Você oferece respostas profissionais e objetivas, com ênfase em dados e análises comerciais. Use linguagem formal e forneça insights orientados a negócios, sempre focando em como transformar dados em decisões estratégicas.";
     }

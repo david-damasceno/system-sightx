@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_personas: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          max_tokens: number | null
+          name: string
+          system_prompt: string
+          temperature: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          max_tokens?: number | null
+          name: string
+          system_prompt: string
+          temperature?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          max_tokens?: number | null
+          name?: string
+          system_prompt?: string
+          temperature?: number | null
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           attachment: Json | null
@@ -71,6 +104,33 @@ export type Database = {
         }
         Relationships: []
       }
+      message_improvements: {
+        Row: {
+          created_at: string | null
+          id: string
+          improved_message: string
+          improvement_type: string | null
+          original_message: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          improved_message: string
+          improvement_type?: string | null
+          original_message: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          improved_message?: string
+          improvement_type?: string | null
+          original_message?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           created_at: string | null
@@ -104,6 +164,69 @@ export type Database = {
         }
         Relationships: []
       }
+      user_analytics: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          ai_persona: string | null
+          auto_save: boolean | null
+          created_at: string | null
+          id: string
+          language: string | null
+          notifications: boolean | null
+          theme: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_persona?: string | null
+          auto_save?: boolean | null
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          notifications?: boolean | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_persona?: string | null
+          auto_save?: boolean | null
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          notifications?: boolean | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -116,6 +239,18 @@ export type Database = {
       get_current_tenant_schema: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_tenant_schema: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      log_user_event: {
+        Args: {
+          event_type_param: string
+          event_data_param?: Json
+          session_id_param?: string
+        }
+        Returns: undefined
       }
       setup_tenant_complete: {
         Args: { user_id_param: string }

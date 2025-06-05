@@ -1,5 +1,8 @@
 
 project_id = "nhpqzxhbdiurhzjpghqz"
 
+[functions.azure-openai-chat]
+verify_jwt = true
+
 [functions.setup-tenant]
 verify_jwt = true
