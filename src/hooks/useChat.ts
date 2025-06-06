@@ -15,7 +15,7 @@ interface AiTypingState {
 
 const useChat = (existingChatId?: string) => {
   const { mode } = useMode();
-  const { user, isInitialized } = useAuth();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
@@ -30,8 +30,9 @@ const useChat = (existingChatId?: string) => {
 
   // Carrega o histórico de chat
   const loadChatSessions = async () => {
-    if (!user || !isInitialized) {
-      console.log("Usuário não disponível ou contexto não inicializado ainda");
+    if (!user) {
+      console.log("Usuário não disponível ainda");
+      setIsHistoryLoaded(true);
       return;
     }
     
@@ -111,19 +112,19 @@ const useChat = (existingChatId?: string) => {
     }
   };
 
-  // Carrega histórico quando usuário estiver disponível e contexto inicializado
+  // Carrega histórico quando usuário estiver disponível
   useEffect(() => {
-    if (user && isInitialized) {
-      console.log("Usuário autenticado e contexto inicializado, carregando histórico...");
+    if (user) {
+      console.log("Usuário disponível, carregando histórico...");
       loadChatSessions();
-    } else if (isInitialized && !user) {
-      console.log("Contexto inicializado mas usuário não está logado, limpando estado");
+    } else {
+      console.log("Usuário não está logado, limpando estado");
       setChatHistory([]);
       setChatSession(null);
       setMessages([]);
       setIsHistoryLoaded(true);
     }
-  }, [user, isInitialized, existingChatId]);
+  }, [user, existingChatId]);
 
   // Efeito de digitação
   useEffect(() => {

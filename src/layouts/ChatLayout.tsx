@@ -7,8 +7,8 @@ const ChatLayout = () => {
   const { isAuthenticated, isLoading, isInitialized } = useAuth();
   const location = useLocation();
 
-  // Mostrar loading enquanto está inicializando
-  if (!isInitialized || isLoading) {
+  // Mostrar loading apenas enquanto está inicializando
+  if (!isInitialized) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-sightx-purple"></div>

@@ -38,12 +38,12 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
 
-  const fetchTenant = async (userId: string, retryCount = 0) => {
+  const fetchTenant = async (userId: string) => {
     try {
       console.log("Buscando tenant para o usuário:", userId);
       const { data, error } = await supabase
@@ -54,26 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error("Erro ao buscar tenant:", error);
-        
-        // Se é um novo usuário e o tenant ainda não existe, aguardar um pouco
-        if (error.code === 'PGRST116' && retryCount < 3) {
-          console.log(`Tenant não encontrado, tentativa ${retryCount + 1}/3. Aguardando...`);
-          setTimeout(() => fetchTenant(userId, retryCount + 1), 2000);
-          return null;
-        }
-        
         return null;
       }
 
       console.log("Tenant encontrado:", data);
       setTenant(data);
-      
-      // Se o tenant está com status 'creating', verificar periodicamente
-      if (data.status === 'creating') {
-        console.log("Tenant ainda em criação, verificando novamente em 3 segundos...");
-        setTimeout(() => fetchTenant(userId), 3000);
-      }
-      
       return data;
     } catch (error) {
       console.error("Erro ao buscar tenant:", error);
@@ -82,22 +67,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUserState = async (session: Session | null) => {
-    if (session?.user) {
-      const userData: User = {
-        id: session.user.id,
-        name: session.user.user_metadata.name || session.user.email?.split('@')[0] || "",
-        email: session.user.email || "",
-        avatar: session.user.user_metadata.avatar_url || "/placeholder.svg"
-      };
-      setUser(userData);
-      console.log("Usuário autenticado:", userData);
-      
-      // Buscar tenant do usuário
-      await fetchTenant(session.user.id);
-    } else {
-      setUser(null);
-      setTenant(null);
-      console.log("Usuário não autenticado");
+    try {
+      if (session?.user) {
+        const userData: User = {
+          id: session.user.id,
+          name: session.user.user_metadata.name || session.user.email?.split('@')[0] || "",
+          email: session.user.email || "",
+          avatar: session.user.user_metadata.avatar_url || "/placeholder.svg"
+        };
+        setUser(userData);
+        console.log("Usuário autenticado:", userData);
+        
+        // Buscar tenant do usuário (sem aguardar)
+        fetchTenant(session.user.id);
+      } else {
+        setUser(null);
+        setTenant(null);
+        console.log("Usuário não autenticado");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar estado do usuário:", error);
+      // Mesmo com erro, garantir que o estado seja limpo
+      if (!session) {
+        setUser(null);
+        setTenant(null);
+      }
     }
   };
 
@@ -105,16 +99,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log("Inicializando AuthProvider");
     
+    let mounted = true;
+    
     // Configurar listener de mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Evento de autenticação:", event, session?.user?.id);
+        
+        if (!mounted) return;
+        
         setSession(session);
         await updateUserState(session);
         
         if (!isInitialized) {
           setIsInitialized(true);
-          setIsLoading(false);
         }
       }
     );
@@ -128,19 +126,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         console.log("Sessão inicial:", session?.user?.id);
-        setSession(session);
-        await updateUserState(session);
+        
+        if (mounted) {
+          setSession(session);
+          await updateUserState(session);
+          setIsInitialized(true);
+        }
       } catch (error) {
         console.error("Erro na inicialização da autenticação:", error);
-      } finally {
-        setIsInitialized(true);
-        setIsLoading(false);
+        if (mounted) {
+          setIsInitialized(true);
+        }
       }
     };
 
     initializeAuth();
 
     return () => {
+      mounted = false;
       console.log("Desconectando listener de autenticação");
       subscription.unsubscribe();
     };
@@ -234,7 +237,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else {
         console.log("Logout bem-sucedido");
-        // O estado será limpo automaticamente pelo onAuthStateChange
         toast({
           title: "Logout bem-sucedido",
           description: "Você foi desconectado da sua conta.",
