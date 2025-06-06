@@ -6,7 +6,9 @@ import { format } from "date-fns";
 import { FileText, Image as ImageIcon, Film, File, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import MessageReactions from "./MessageReactions";
+import MessageActions from "./MessageActions";
+import { useMessageFavorites } from "../hooks/useMessageFavorites";
+import { useMessageReactions } from "../hooks/useMessageReactions";
 
 interface ChatMessageProps {
   message: Message;
@@ -26,6 +28,8 @@ const ChatMessage = ({
 }: ChatMessageProps) => {
   const isAI = message.isAI;
   const content = typing?.isActive ? typing.partialContent || "" : message.content;
+  const { toggleFavorite, isFavorite } = useMessageFavorites();
+  const { addReaction, removeReaction, getUserReaction } = useMessageReactions();
 
   // Function to determine attachment icon
   const getAttachmentIcon = (type: string) => {
@@ -35,6 +39,20 @@ const ChatMessage = ({
     if (type.includes("pdf")) return <FileText className="h-4 w-4" />;
     if (type.includes("doc")) return <FileText className="h-4 w-4" />;
     return <File className="h-4 w-4" />;
+  };
+
+  const handleReaction = async (
+    messageId: string, 
+    sessionId: string, 
+    reactionType: 'like' | 'dislike' | 'helpful' | 'not_helpful'
+  ): Promise<boolean> => {
+    const currentReaction = getUserReaction(messageId, reactionType);
+    
+    if (currentReaction) {
+      return await removeReaction(messageId, reactionType);
+    } else {
+      return await addReaction(messageId, sessionId, reactionType);
+    }
   };
 
   return (
@@ -128,8 +146,16 @@ const ChatMessage = ({
         )}
       </div>
       
-      {/* Message reactions */}
-      <MessageReactions messageId={message.id} isAI={isAI} />
+      {/* Message actions */}
+      <MessageActions
+        messageId={message.id}
+        sessionId={message.senderId} // Assumindo que temos acesso ao session ID
+        isAI={isAI}
+        isFavorite={isFavorite(message.id)}
+        onToggleFavorite={toggleFavorite}
+        onReaction={handleReaction}
+        getUserReaction={getUserReaction}
+      />
     </div>
   );
 };

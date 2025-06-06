@@ -104,6 +104,30 @@ export type Database = {
         }
         Relationships: []
       }
+      favorite_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_id: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_id: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_id?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_improvements: {
         Row: {
           created_at: string | null
@@ -128,6 +152,69 @@ export type Database = {
           improvement_type?: string | null
           original_message?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      message_reactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_id: string
+          reaction_type: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_id: string
+          reaction_type: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_id?: string
+          reaction_type?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      shared_conversations: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_public: boolean | null
+          session_id: string
+          share_token: string
+          title: string
+          user_id: string
+          view_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_public?: boolean | null
+          session_id: string
+          share_token?: string
+          title: string
+          user_id: string
+          view_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_public?: boolean | null
+          session_id?: string
+          share_token?: string
+          title?: string
+          user_id?: string
+          view_count?: number | null
         }
         Relationships: []
       }
