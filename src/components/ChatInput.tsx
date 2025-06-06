@@ -110,7 +110,7 @@ const ChatInput = ({
     }
   };
   const isDisabled = isProcessing || showVoiceRecorder || improvingMessage;
-  return <div className="border-t glass-panel bg-opacity-30 shadow-lg py-[10px] flex flex-col">
+  return <div className="border-t glass-panel bg-opacity-30 shadow-lg py-[10px] flex flex-col bg-[#000a00]/0">
       {showVoiceRecorder && <div className="px-[100px] mb-3">
           <VoiceRecorder onRecordingComplete={handleVoiceRecordingComplete} onCancel={() => setShowVoiceRecorder(false)} />
         </div>}
