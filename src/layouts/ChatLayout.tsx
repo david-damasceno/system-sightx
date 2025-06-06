@@ -4,11 +4,21 @@ import { useAuth } from "../contexts/AuthContext";
 import Sidebar from "../components/Sidebar";
 
 const ChatLayout = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isInitialized } = useAuth();
   const location = useLocation();
 
+  // Mostrar loading enquanto está inicializando
+  if (!isInitialized || isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-sightx-purple"></div>
+      </div>
+    );
+  }
+
   // Se não está autenticado, redirecionar para o login
-  if (!isLoading && !isAuthenticated) {
+  if (!isAuthenticated) {
+    console.log("Usuário não autenticado, redirecionando para login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

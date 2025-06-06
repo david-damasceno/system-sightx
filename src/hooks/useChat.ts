@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message, ChatSession } from "../types";
@@ -16,11 +15,12 @@ interface AiTypingState {
 
 const useChat = (existingChatId?: string) => {
   const { mode } = useMode();
-  const { user } = useAuth();
+  const { user, isInitialized } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
   const [aiTyping, setAiTyping] = useState<AiTypingState>({
     isTyping: false,
     partialMessage: "",
@@ -30,10 +30,14 @@ const useChat = (existingChatId?: string) => {
 
   // Carrega o histórico de chat
   const loadChatSessions = async () => {
-    if (!user) return;
+    if (!user || !isInitialized) {
+      console.log("Usuário não disponível ou contexto não inicializado ainda");
+      return;
+    }
     
     try {
-      console.log("Carregando sessões do chat");
+      console.log("Carregando sessões do chat para usuário:", user.id);
+      setIsHistoryLoaded(false);
       
       const { data: sessions, error } = await supabase
         .from('chat_sessions')
@@ -43,8 +47,11 @@ const useChat = (existingChatId?: string) => {
         
       if (error) {
         console.error("Erro ao buscar sessões:", error);
+        setIsHistoryLoaded(true);
         return;
       }
+
+      console.log("Sessões encontradas:", sessions?.length || 0);
 
       if (sessions) {
         const formattedSessions: ChatSession[] = await Promise.all(
@@ -54,6 +61,10 @@ const useChat = (existingChatId?: string) => {
               .select('*')
               .eq('session_id', session.id)
               .order('timestamp', { ascending: true });
+              
+            if (messagesError) {
+              console.error("Erro ao buscar mensagens:", messagesError);
+            }
               
             const formattedMessages: Message[] = messageData?.map((msg: any) => ({
               id: msg.id,
@@ -80,6 +91,7 @@ const useChat = (existingChatId?: string) => {
           })
         );
         
+        console.log("Histórico formatado:", formattedSessions.length, "sessões");
         setChatHistory(formattedSessions);
         
         if (existingChatId) {
@@ -91,16 +103,27 @@ const useChat = (existingChatId?: string) => {
           }
         }
       }
+      
+      setIsHistoryLoaded(true);
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
+      setIsHistoryLoaded(true);
     }
   };
 
+  // Carrega histórico quando usuário estiver disponível e contexto inicializado
   useEffect(() => {
-    if (user) {
+    if (user && isInitialized) {
+      console.log("Usuário autenticado e contexto inicializado, carregando histórico...");
       loadChatSessions();
+    } else if (isInitialized && !user) {
+      console.log("Contexto inicializado mas usuário não está logado, limpando estado");
+      setChatHistory([]);
+      setChatSession(null);
+      setMessages([]);
+      setIsHistoryLoaded(true);
     }
-  }, [user, existingChatId]);
+  }, [user, isInitialized, existingChatId]);
 
   // Efeito de digitação
   useEffect(() => {
@@ -408,6 +431,7 @@ const useChat = (existingChatId?: string) => {
     deleteChat,
     clearAllChats,
     improveMessage,
+    isHistoryLoaded
   };
 };
 
