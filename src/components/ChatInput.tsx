@@ -119,7 +119,7 @@ const ChatInput = ({
           <FilePreview file={selectedFile} onRemove={() => setSelectedFile(null)} />
         </div>}
 
-      <form onSubmit={handleSubmit} className="p-4 flex items-center justify-between px-[200px] py-[3px]">
+      <form onSubmit={handleSubmit} className="p-4 flex items-center justify-between px-[200px] py-[10px]">
         <div className={cn("relative flex items-end rounded-xl overflow-hidden border transition-all flex-1", focused ? "ring-2 ring-sightx-purple" : "", isDisabled ? "opacity-50" : "")}>
           <Textarea ref={textareaRef} value={message} onChange={e => setMessage(e.target.value)} onKeyDown={handleKeyDown} placeholder={isImproved ? "Mensagem melhorada com IA - pressione Enter para enviar" : "Escreva sua mensagem para análise de negócios..."} className={cn("pr-24 resize-none min-h-[56px] max-h-[200px] rounded-xl py-3.5 transition-all", isImproved && "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800")} disabled={isDisabled} rows={1} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
           <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
