@@ -202,7 +202,7 @@ const ChatInput = ({
           <div className="flex gap-2">
             {isProcessing && <span className="animate-pulse">Processando...</span>}
             {improvingMessage && <span className="animate-pulse text-sightx-purple">Melhorando com IA...</span>}
-            {isImproved && !improvingMessage && <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+            {isImproved && !improvingMessage && <span className="flex items-center gap-1 px-[100px] text-black">
                 <Sparkles className="h-3 w-3" />
                 Melhorado com IA
               </span>}
