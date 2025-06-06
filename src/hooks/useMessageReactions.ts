@@ -29,7 +29,14 @@ export const useMessageReactions = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setReactions(data || []);
+      
+      // Type cast the reaction_type from string to ReactionType
+      const typedReactions = (data || []).map(reaction => ({
+        ...reaction,
+        reaction_type: reaction.reaction_type as ReactionType
+      }));
+      
+      setReactions(typedReactions);
     } catch (error) {
       console.error("Erro ao carregar reações:", error);
     }
@@ -65,9 +72,15 @@ export const useMessageReactions = () => {
 
       if (error) throw error;
 
+      // Type cast the reaction_type from string to ReactionType
+      const typedReaction = {
+        ...data,
+        reaction_type: data.reaction_type as ReactionType
+      };
+
       setReactions(prev => {
         const filtered = prev.filter(r => !(r.message_id === messageId && r.reaction_type === reactionType));
-        return [...filtered, data];
+        return [...filtered, typedReaction];
       });
 
       return true;
