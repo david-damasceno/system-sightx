@@ -145,7 +145,7 @@ const ChatWindow = () => {
       <ScrollArea className={cn("flex-1 p-4 pt-6", isMobile ? "px-2" : "px-4")} onScrollCapture={handleScroll} ref={scrollContainerRef}>
         {messages.length === 0 ? <div className="flex items-center justify-center h-full flex-col gap-4 text-muted-foreground">
             <div className="w-16 h-16 rounded-full flex items-center justify-center bg-sightx-purple/10 mb-4">
-              <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-10 w-10" />
+              <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className="h-10 w-10 object-scale-down" />
             </div>
             <p className="text-center text-lg font-medium">Bem-vindo ao SightX Chat</p>
             <p className="text-center">Digite uma mensagem abaixo para iniciar a conversa com nossa IA especializada em análise de dados.</p>
