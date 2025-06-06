@@ -7,6 +7,7 @@ import { FileText, Image as ImageIcon, Film, File, ExternalLink } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import MessageActions from "./MessageActions";
+import MarkdownRenderer from "./MarkdownRenderer";
 import { useMessageFavorites } from "../hooks/useMessageFavorites";
 import { useMessageReactions } from "../hooks/useMessageReactions";
 
@@ -84,8 +85,14 @@ const ChatMessage = ({
         isAI ? "message-bubble-ai rounded-2xl rounded-tl-sm" : "message-bubble-user rounded-2xl rounded-tr-sm", 
         typing?.isActive && "animate-pulse"
       )}>
-        {/* Message content */}
-        <p id={`message-${message.id}`} className="whitespace-pre-wrap">{content}</p>
+        {/* Message content - Use Markdown for AI messages, plain text for user messages */}
+        <div id={`message-${message.id}`}>
+          {isAI ? (
+            <MarkdownRenderer content={content} isAI={true} />
+          ) : (
+            <p className="whitespace-pre-wrap">{content}</p>
+          )}
+        </div>
         
         {/* File attachment */}
         {message.attachment && (
@@ -149,7 +156,7 @@ const ChatMessage = ({
       {/* Message actions */}
       <MessageActions
         messageId={message.id}
-        sessionId={message.senderId} // Assumindo que temos acesso ao session ID
+        sessionId={message.senderId}
         isAI={isAI}
         isFavorite={isFavorite(message.id)}
         onToggleFavorite={toggleFavorite}
