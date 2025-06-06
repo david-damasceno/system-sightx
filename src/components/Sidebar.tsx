@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,7 +8,6 @@ import { MessageSquare, History, User, LogOut, Menu, X, Plus, ChevronRight, Sett
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-
 const NavItem = ({
   to,
   icon: Icon,
@@ -25,57 +23,36 @@ const NavItem = ({
   isActive?: boolean;
   isCompact?: boolean;
 }) => {
-  const { pathname } = useLocation();
+  const {
+    pathname
+  } = useLocation();
   const isActive = forced !== undefined ? forced : pathname === to || pathname.startsWith(`${to}/`);
-  
   if (isCompact) {
-    return (
-      <Link 
-        to={to} 
-        className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-xl mx-auto mb-1 transition-all duration-300",
-          isActive 
-            ? "bg-sightx-purple text-white shadow-md shadow-sightx-purple/20" 
-            : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple"
-        )} 
-        onClick={onClick} 
-        title={String(children)}
-      >
+    return <Link to={to} className={cn("flex h-10 w-10 items-center justify-center rounded-xl mx-auto mb-1 transition-all duration-300", isActive ? "bg-sightx-purple text-white shadow-md shadow-sightx-purple/20" : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple")} onClick={onClick} title={String(children)}>
         <Icon className="h-5 w-5" />
-      </Link>
-    );
+      </Link>;
   }
-
-  return (
-    <Link 
-      to={to} 
-      className={cn(
-        "flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-300",
-        isActive 
-          ? "bg-sightx-purple text-white font-medium shadow-md shadow-sightx-purple/20" 
-          : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple"
-      )} 
-      onClick={onClick}
-    >
+  return <Link to={to} className={cn("flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-300", isActive ? "bg-sightx-purple text-white font-medium shadow-md shadow-sightx-purple/20" : "hover:bg-sightx-purple/10 text-muted-foreground hover:text-sightx-purple")} onClick={onClick}>
       <Icon className="h-5 w-5" />
       <span>{children}</span>
       {isActive && <ChevronRight className="ml-auto h-4 w-4 text-white" />}
-    </Link>
-  );
+    </Link>;
 };
-
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
-  const { user, logout } = useAuth();
+  const {
+    user,
+    logout
+  } = useAuth();
   const location = useLocation();
   const sidebarRef = useRef<HTMLElement>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
-
   const toggleDarkMode = () => {
     const isDark = document.documentElement.classList.contains('dark');
     if (isDark) {
@@ -94,11 +71,9 @@ const Sidebar = () => {
       });
     }
   };
-
   const toggleCompactMode = () => {
     setIsCompact(!isCompact);
   };
-
   const getUserInitials = () => {
     if (!user || !user.name) return "U";
     const nameParts = user.name.trim().split(" ");
@@ -108,68 +83,36 @@ const Sidebar = () => {
       return nameParts[0].charAt(0).toUpperCase();
     }
   };
-
-  return (
-    <>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="absolute top-4 left-4 z-50 md:hidden" 
-        onClick={() => setIsOpen(!isOpen)}
-      >
+  return <>
+      <Button variant="ghost" size="icon" className="absolute top-4 left-4 z-50 md:hidden" onClick={() => setIsOpen(!isOpen)}>
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
       
-      <aside 
-        ref={sidebarRef} 
-        className={cn(
-          "bg-background/95 dark:bg-sightx-dark/95 fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out shadow-lg border-r border-border/50 md:relative backdrop-blur-lg flex flex-col",
-          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          isCompact ? "md:w-[70px]" : "md:w-64"
-        )}
-      >
-        <div className="flex-none p-3 py-0">
-          <div className={cn(
-            "flex items-center py-4 transition-all duration-300",
-            isCompact ? "justify-center px-0" : "justify-center px-3"
-          )}>
-            <img 
-              src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" 
-              alt="SightX Logo" 
-              className={cn(
-                "object-contain rounded-xl transition-all duration-300",
-                isCompact ? "h-12 w-12" : "h-14 w-14"
-              )} 
-            />
+      <aside ref={sidebarRef} className={cn("bg-background/95 dark:bg-sightx-dark/95 fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out shadow-lg border-r border-border/50 md:relative backdrop-blur-lg flex flex-col", isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0", isCompact ? "md:w-[70px]" : "md:w-64")}>
+        <div className="flex-none p-3 py-0 px-0 rounded-sm">
+          <div className={cn("flex items-center py-4 transition-all duration-300", isCompact ? "justify-center px-0" : "justify-center px-3")}>
+            <img src="/lovable-uploads/9000350f-715f-4dda-9046-fd7cd24ae8ff.png" alt="SightX Logo" className={cn("object-contain rounded-xl transition-all duration-300", isCompact ? "h-12 w-12" : "h-14 w-14")} />
             
-            <h1 className={cn(
-              "font-bold ml-2 transition-all duration-300 text-sightx-purple",
-              isCompact ? "opacity-0 w-0" : "opacity-100 text-2xl"
-            )}>
+            <h1 className={cn("font-bold ml-2 transition-all duration-300 text-sightx-purple", isCompact ? "opacity-0 w-0" : "opacity-100 text-2xl")}>
               SightX
             </h1>
           </div>
           
           <Separator className="my-0" />
           
-          {isCompact ? (
-            <NavItem to="/chat" icon={Plus} isCompact={true} isActive={false}>
+          {isCompact ? <NavItem to="/chat" icon={Plus} isCompact={true} isActive={false}>
               Nova Conversa
-            </NavItem>
-          ) : (
-            <Link to="/chat" className="block mt-4 mb-3">
+            </NavItem> : <Link to="/chat" className="block mt-4 mb-3">
               <Button className="w-full flex gap-2 shadow-md bg-sightx-purple hover:bg-sightx-purple-light shadow-sightx-purple/20" size="sm">
                 <Plus className="h-4 w-4" />
                 Nova Conversa
               </Button>
-            </Link>
-          )}
+            </Link>}
         </div>
           
         <ScrollArea className="flex-1 px-3">
           <nav className="space-y-1 mt-3 mb-6">
-            {isCompact ? (
-              <>
+            {isCompact ? <>
                 <NavItem to="/chat" icon={MessageSquare} isCompact={true}>
                   Chat
                 </NavItem>
@@ -188,9 +131,7 @@ const Sidebar = () => {
                 <NavItem to="/profile" icon={User} isCompact={true}>
                   Perfil
                 </NavItem>
-              </>
-            ) : (
-              <>
+              </> : <>
                 <NavItem to="/chat" icon={MessageSquare}>
                   Chat
                 </NavItem>
@@ -209,19 +150,14 @@ const Sidebar = () => {
                 <NavItem to="/profile" icon={User}>
                   Perfil
                 </NavItem>
-              </>
-            )}
+              </>}
           </nav>
           
-          {!isCompact && (
-            <>
+          {!isCompact && <>
               <div className="px-3 mb-2">
                 <p className="text-xs text-muted-foreground mb-2">Preferências</p>
                 <div className="space-y-1">
-                  <button 
-                    className="flex items-center w-full gap-3 py-2 px-3 rounded-lg text-muted-foreground hover:bg-muted transition-colors" 
-                    onClick={toggleDarkMode}
-                  >
+                  <button className="flex items-center w-full gap-3 py-2 px-3 rounded-lg text-muted-foreground hover:bg-muted transition-colors" onClick={toggleDarkMode}>
                     <Sun className="h-5 w-5 dark:hidden" />
                     <Moon className="h-5 w-5 hidden dark:block" />
                     <span>Alternar tema</span>
@@ -243,60 +179,35 @@ const Sidebar = () => {
                   <span>Ajuda</span>
                 </button>
               </div>
-            </>
-          )}
+            </>}
         </ScrollArea>
         
         <div className="flex-none p-3">
           <Separator className="my-3" />
           
           <div className="flex items-center justify-between mb-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={toggleCompactMode} 
-              className="w-full flex items-center justify-center gap-2 text-xs"
-            >
-              {isCompact ? (
-                <>
+            <Button variant="outline" size="sm" onClick={toggleCompactMode} className="w-full flex items-center justify-center gap-2 text-xs">
+              {isCompact ? <>
                   <PanelLeftOpen className="h-4 w-4" />
                   <span className="sr-only">Expandir</span>
-                </>
-              ) : (
-                <>
+                </> : <>
                   <PanelLeftClose className="h-4 w-4" />
                   <span>Recolher menu</span>
-                </>
-              )}
+                </>}
             </Button>
           </div>
           
-          {isCompact ? (
-            <Button 
-              variant="ghost" 
-              className="w-10 h-10 rounded-full p-0 mx-auto block" 
-              onClick={() => logout()}
-            >
+          {isCompact ? <Button variant="ghost" className="w-10 h-10 rounded-full p-0 mx-auto block" onClick={() => logout()}>
               <Avatar className="h-9 w-9 border-2 border-sightx-purple/20">
-                {user?.avatar ? (
-                  <AvatarImage src={user.avatar} alt={user?.name || "User"} />
-                ) : (
-                  <AvatarFallback className="text-white bg-sightx-purple">
+                {user?.avatar ? <AvatarImage src={user.avatar} alt={user?.name || "User"} /> : <AvatarFallback className="text-white bg-sightx-purple">
                     {getUserInitials()}
-                  </AvatarFallback>
-                )}
+                  </AvatarFallback>}
               </Avatar>
-            </Button>
-          ) : (
-            <div className="flex items-center gap-3 px-3 py-2">
+            </Button> : <div className="flex items-center gap-3 px-3 py-2">
               <Avatar className="h-10 w-10 border-2 border-sightx-purple/20">
-                {user?.avatar ? (
-                  <AvatarImage src={user.avatar} alt={user?.name || "User"} />
-                ) : (
-                  <AvatarFallback className="text-white bg-sightx-purple">
+                {user?.avatar ? <AvatarImage src={user.avatar} alt={user?.name || "User"} /> : <AvatarFallback className="text-white bg-sightx-purple">
                     {getUserInitials()}
-                  </AvatarFallback>
-                )}
+                  </AvatarFallback>}
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user?.name}</p>
@@ -305,27 +216,14 @@ const Sidebar = () => {
                 </p>
               </div>
               
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={logout} 
-                className="text-muted-foreground hover:text-destructive h-8 w-8"
-              >
+              <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:text-destructive h-8 w-8">
                 <LogOut className="h-4 w-4" />
               </Button>
-            </div>
-          )}
+            </div>}
         </div>
       </aside>
       
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden" 
-          onClick={() => setIsOpen(false)} 
-        />
-      )}
-    </>
-  );
+      {isOpen && <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden" onClick={() => setIsOpen(false)} />}
+    </>;
 };
-
 export default Sidebar;
